@@ -8,6 +8,9 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+const MAX_FILE_SIZE = process.env.MAX_FILE_SIZE
+  ? parseInt(process.env.MAX_FILE_SIZE) * 1024 * 1024
+  : 1024 * 1024 * 1024; // Default 1GB, or MAX_FILE_SIZE in MB
 
 // Middleware
 app.use(cors());
@@ -41,7 +44,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB limit
+    fileSize: MAX_FILE_SIZE
   }
 });
 
@@ -219,5 +222,6 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`FileDrop server running on port ${PORT}`);
   console.log(`Upload directory: ${path.resolve(UPLOAD_DIR)}`);
+  console.log(`Max file size: ${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB`);
   console.log(`Access the web interface at http://localhost:${PORT}`);
 });

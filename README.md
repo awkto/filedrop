@@ -94,6 +94,7 @@ Environment variables (can be set in `.env` or `docker-compose.yml`):
 
 - `PORT`: Server port (default: 3000)
 - `UPLOAD_DIR`: Directory for uploaded files (default: ./uploads)
+- `MAX_FILE_SIZE`: Maximum file size in MB (default: 1024 = 1GB)
 
 ## File Storage
 
@@ -143,7 +144,7 @@ GET /api/health
 ### Phase 1 (No Authentication)
 - Anyone with network access can upload, download, or delete files
 - No file type restrictions
-- 100MB file size limit
+- 1GB file size limit (configurable via MAX_FILE_SIZE environment variable)
 - Path traversal protection implemented
 - Suitable for trusted networks only (e.g., home network, internal network)
 
