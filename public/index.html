@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FileDrop - File Sharing Server</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>FileDrop</h1>
+      <p class="subtitle">Simple file upload and download server</p>
+    </header>
+
+    <main>
+      <!-- Breadcrumb navigation -->
+      <div class="breadcrumb">
+        <span class="breadcrumb-item" data-path="">Home</span>
+        <span id="breadcrumb-trail"></span>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="actions">
+        <button id="new-folder-btn" class="btn btn-secondary">
+          <span class="icon">📁</span> New Folder
+        </button>
+        <label for="file-input" class="btn btn-primary">
+          <span class="icon">📤</span> Upload Files
+        </label>
+        <input type="file" id="file-input" multiple style="display: none;">
+      </div>
+
+      <!-- File/Folder list -->
+      <div id="file-list" class="file-list">
+        <div class="loading">Loading files...</div>
+      </div>
+
+      <!-- Upload progress -->
+      <div id="upload-progress" class="upload-progress" style="display: none;">
+        <div class="progress-header">
+          <span>Uploading...</span>
+          <span id="progress-text">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- New folder modal -->
+  <div id="folder-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Create New Folder</h2>
+      <input type="text" id="folder-name" placeholder="Folder name" />
+      <div class="modal-actions">
+        <button id="cancel-folder-btn" class="btn btn-secondary">Cancel</button>
+        <button id="create-folder-btn" class="btn btn-primary">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

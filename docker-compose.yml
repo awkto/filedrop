@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  filedrop:
+    build: .
+    container_name: filedrop
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persist uploaded files
+      - ./uploads:/app/uploads
+    environment:
+      - PORT=3000
+      - UPLOAD_DIR=/app/uploads
+    restart: unless-stopped
