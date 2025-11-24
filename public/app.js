@@ -1,5 +1,6 @@
 // State
 let currentPath = '';
+let dragCounter = 0;
 
 // DOM Elements
 const fileList = document.getElementById('file-list');
@@ -10,11 +11,13 @@ const progressText = document.getElementById('progress-text');
 const breadcrumbTrail = document.getElementById('breadcrumb-trail');
 const folderModal = document.getElementById('folder-modal');
 const folderNameInput = document.getElementById('folder-name');
+const dropOverlay = document.getElementById('drop-overlay');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   loadFiles();
   setupEventListeners();
+  setupDragAndDrop();
 });
 
 // Event Listeners
@@ -275,6 +278,68 @@ async function deleteItem(path, type) {
     console.error('Error deleting item:', error);
     alert('Failed to delete. Please try again.');
   }
+}
+
+// Drag and Drop functionality
+function setupDragAndDrop() {
+  // Prevent default drag behaviors on the whole document
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Handle drag enter
+  document.body.addEventListener('dragenter', (e) => {
+    dragCounter++;
+    if (dragCounter === 1) {
+      dropOverlay.style.display = 'flex';
+      fileList.classList.add('drag-over');
+    }
+  });
+
+  // Handle drag leave
+  document.body.addEventListener('dragleave', (e) => {
+    dragCounter--;
+    if (dragCounter === 0) {
+      dropOverlay.style.display = 'none';
+      fileList.classList.remove('drag-over');
+    }
+  });
+
+  // Handle drop
+  document.body.addEventListener('drop', (e) => {
+    dragCounter = 0;
+    dropOverlay.style.display = 'none';
+    fileList.classList.remove('drag-over');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleDroppedFiles(files);
+    }
+  });
+
+  // Handle dragover for visual feedback
+  document.body.addEventListener('dragover', (e) => {
+    e.dataTransfer.dropEffect = 'copy';
+  });
+}
+
+// Handle dropped files
+function handleDroppedFiles(files) {
+  // Create a FileList-like object for upload
+  const dataTransfer = new DataTransfer();
+
+  for (let i = 0; i < files.length; i++) {
+    dataTransfer.items.add(files[i]);
+  }
+
+  // Set the files to the file input and trigger upload
+  fileInput.files = dataTransfer.files;
+  handleFileUpload();
 }
 
 // Utility functions
