@@ -1,6 +1,9 @@
 // State
 let currentPath = '';
 let dragCounter = 0;
+let currentView = 'grid'; // 'grid' or 'table'
+let currentSort = 'name-asc';
+let cachedItems = [];
 
 // DOM Elements
 const fileList = document.getElementById('file-list');
@@ -12,6 +15,8 @@ const breadcrumbTrail = document.getElementById('breadcrumb-trail');
 const folderModal = document.getElementById('folder-modal');
 const folderNameInput = document.getElementById('folder-name');
 const dropOverlay = document.getElementById('drop-overlay');
+const viewToggleBtn = document.getElementById('view-toggle-btn');
+const sortSelect = document.getElementById('sort-select');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -58,6 +63,15 @@ function setupEventListeners() {
   document.querySelector('.breadcrumb-item[data-path]').addEventListener('click', (e) => {
     navigateToPath(e.target.dataset.path);
   });
+
+  // View toggle
+  viewToggleBtn.addEventListener('click', toggleView);
+
+  // Sort select
+  sortSelect.addEventListener('change', (e) => {
+    currentSort = e.target.value;
+    renderFileList(cachedItems);
+  });
 }
 
 // Load files from server
@@ -73,12 +87,47 @@ async function loadFiles(path = '') {
     }
 
     const data = await response.json();
-    renderFileList(data.items);
+    cachedItems = data.items;
+    renderFileList(cachedItems);
     updateBreadcrumb(path);
   } catch (error) {
     console.error('Error loading files:', error);
     fileList.innerHTML = '<div class="empty-state">Failed to load files. Please try again.</div>';
   }
+}
+
+// Toggle view
+function toggleView() {
+  currentView = currentView === 'grid' ? 'table' : 'grid';
+  viewToggleBtn.querySelector('.icon').textContent = currentView === 'grid' ? '📋' : '📊';
+  renderFileList(cachedItems);
+}
+
+// Sort items
+function sortItems(items) {
+  const sorted = [...items];
+  const [field, order] = currentSort.split('-');
+
+  sorted.sort((a, b) => {
+    // Always put folders first
+    if (a.type !== b.type) {
+      return a.type === 'folder' ? -1 : 1;
+    }
+
+    let comparison = 0;
+
+    if (field === 'name') {
+      comparison = a.name.localeCompare(b.name);
+    } else if (field === 'size') {
+      comparison = (a.size || 0) - (b.size || 0);
+    } else if (field === 'date') {
+      comparison = new Date(a.modified) - new Date(b.modified);
+    }
+
+    return order === 'desc' ? -comparison : comparison;
+  });
+
+  return sorted;
 }
 
 // Render file list
@@ -94,21 +143,35 @@ function renderFileList(items) {
     return;
   }
 
+  const sortedItems = sortItems(items);
+
+  if (currentView === 'table') {
+    renderTableView(sortedItems);
+  } else {
+    renderGridView(sortedItems);
+  }
+}
+
+// Render grid view
+function renderGridView(items) {
+  fileList.classList.remove('table-view');
   fileList.innerHTML = items.map(item => {
     const icon = item.type === 'folder' ? '📁' : '📄';
     const sizeText = item.type === 'file' ? formatBytes(item.size) : '';
     const dateText = new Date(item.modified).toLocaleString();
 
     return `
-      <div class="file-item ${item.type}" data-path="${item.path}" data-type="${item.type}">
+      <div class="file-item ${item.type}" data-path="${escapeHtml(item.path)}" data-type="${item.type}">
         <div class="file-icon">${icon}</div>
         <div class="file-info">
           <div class="file-name">${escapeHtml(item.name)}</div>
           <div class="file-meta">${sizeText ? sizeText + ' • ' : ''}${dateText}</div>
         </div>
         <div class="file-actions">
-          ${item.type === 'file' ? `<button class="btn btn-download" onclick="downloadFile('${item.path}')">Download</button>` : ''}
-          <button class="btn btn-danger" onclick="deleteItem('${item.path}', '${item.type}')">Delete</button>
+          ${item.type === 'file'
+            ? `<button class="btn btn-download" onclick="downloadFile('${escapeHtml(item.path)}')">Download</button>`
+            : `<button class="btn btn-download" onclick="downloadFolder('${escapeHtml(item.path)}')">Download Zip</button>`}
+          <button class="btn btn-danger" onclick="deleteItem('${escapeHtml(item.path)}', '${item.type}')">Delete</button>
         </div>
       </div>
     `;
@@ -119,6 +182,55 @@ function renderFileList(items) {
     item.addEventListener('click', (e) => {
       if (!e.target.closest('.file-actions')) {
         navigateToPath(item.dataset.path);
+      }
+    });
+  });
+}
+
+// Render table view
+function renderTableView(items) {
+  fileList.classList.add('table-view');
+  fileList.innerHTML = `
+    <table class="file-table">
+      <thead>
+        <tr>
+          <th class="file-icon-cell"></th>
+          <th class="file-name-cell">Name</th>
+          <th class="file-size-cell">Size</th>
+          <th class="file-date-cell">Modified</th>
+          <th class="file-actions-cell">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(item => {
+          const icon = item.type === 'folder' ? '📁' : '📄';
+          const sizeText = item.type === 'file' ? formatBytes(item.size) : '—';
+          const dateText = new Date(item.modified).toLocaleString();
+
+          return `
+            <tr class="${item.type}" data-path="${escapeHtml(item.path)}" data-type="${item.type}">
+              <td class="file-icon-cell">${icon}</td>
+              <td class="file-name-cell">${escapeHtml(item.name)}</td>
+              <td class="file-size-cell">${sizeText}</td>
+              <td class="file-date-cell">${dateText}</td>
+              <td class="file-actions-cell">
+                ${item.type === 'file'
+                  ? `<button class="btn btn-download" onclick="downloadFile('${escapeHtml(item.path)}')">Download</button>`
+                  : `<button class="btn btn-download" onclick="downloadFolder('${escapeHtml(item.path)}')">Download Zip</button>`}
+                <button class="btn btn-danger" onclick="deleteItem('${escapeHtml(item.path)}', '${item.type}')">Delete</button>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+
+  // Add click handlers for folders in table view
+  document.querySelectorAll('.file-table tbody tr.folder').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (!e.target.closest('.file-actions-cell')) {
+        navigateToPath(row.dataset.path);
       }
     });
   });
@@ -253,6 +365,11 @@ async function createFolder() {
 // Download file
 function downloadFile(path) {
   window.location.href = `/api/download/${path}`;
+}
+
+// Download folder as zip
+function downloadFolder(path) {
+  window.location.href = `/api/download-zip/${path}`;
 }
 
 // Delete file or folder
