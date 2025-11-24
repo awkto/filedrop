@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const cors = require('cors');
+const archiver = require('archiver');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -144,7 +145,7 @@ app.get('/api/download/*', async (req, res) => {
       const stats = await fs.stat(fullPath);
 
       if (stats.isDirectory()) {
-        return res.status(400).json({ error: 'Cannot download a directory' });
+        return res.status(400).json({ error: 'Cannot download a directory. Use /api/download-zip/ instead.' });
       }
     } catch {
       return res.status(404).json({ error: 'File not found' });
@@ -154,6 +155,54 @@ app.get('/api/download/*', async (req, res) => {
   } catch (error) {
     console.error('Error downloading file:', error);
     res.status(500).json({ error: 'Failed to download file' });
+  }
+});
+
+// Download folder as zip
+app.get('/api/download-zip/*', async (req, res) => {
+  try {
+    const folderPath = req.params[0];
+    const fullPath = getFullPath(folderPath);
+
+    // Check if folder exists
+    try {
+      await fs.access(fullPath);
+      const stats = await fs.stat(fullPath);
+
+      if (!stats.isDirectory()) {
+        return res.status(400).json({ error: 'Path is not a directory' });
+      }
+    } catch {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+
+    // Set response headers
+    const folderName = path.basename(fullPath) || 'download';
+    res.attachment(`${folderName}.zip`);
+    res.setHeader('Content-Type', 'application/zip');
+
+    // Create archive
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Maximum compression
+    });
+
+    // Handle errors
+    archive.on('error', (err) => {
+      console.error('Archive error:', err);
+      res.status(500).json({ error: 'Failed to create archive' });
+    });
+
+    // Pipe archive to response
+    archive.pipe(res);
+
+    // Add directory to archive
+    archive.directory(fullPath, false);
+
+    // Finalize archive
+    await archive.finalize();
+  } catch (error) {
+    console.error('Error downloading folder:', error);
+    res.status(500).json({ error: 'Failed to download folder' });
   }
 });
 

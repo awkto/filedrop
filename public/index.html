@@ -29,6 +29,20 @@
           <span class="icon">📤</span> Upload Files
         </label>
         <input type="file" id="file-input" multiple style="display: none;">
+
+        <div class="actions-right">
+          <button id="view-toggle-btn" class="btn btn-secondary" title="Toggle view">
+            <span class="icon">📋</span>
+          </button>
+          <select id="sort-select" class="sort-select">
+            <option value="name-asc">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+            <option value="size-asc">Size (Small)</option>
+            <option value="size-desc">Size (Large)</option>
+            <option value="date-asc">Date (Old)</option>
+            <option value="date-desc">Date (New)</option>
+          </select>
+        </div>
       </div>
 
       <!-- File/Folder list with drag-and-drop zone -->

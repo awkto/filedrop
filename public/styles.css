@@ -87,6 +87,36 @@ main {
   gap: 10px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.actions-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.sort-select {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sort-select:hover {
+  border-color: var(--primary-color);
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
 }
 
 /* Buttons */
@@ -151,6 +181,79 @@ main {
 /* File list */
 .file-list {
   min-height: 300px;
+}
+
+/* Table view */
+.file-list.table-view {
+  display: block;
+}
+
+.file-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.file-table thead {
+  background: var(--background);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.file-table th {
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border-color);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.file-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s;
+}
+
+.file-table tbody tr:hover {
+  background: var(--background);
+}
+
+.file-table tbody tr.folder {
+  cursor: pointer;
+}
+
+.file-table td {
+  padding: 12px 15px;
+  vertical-align: middle;
+}
+
+.file-table .file-icon-cell {
+  width: 40px;
+  font-size: 1.5rem;
+}
+
+.file-table .file-name-cell {
+  font-weight: 500;
+}
+
+.file-table .file-size-cell,
+.file-table .file-date-cell {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.file-table .file-actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.file-table .file-actions-cell .btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  margin-left: 5px;
 }
 
 .loading {
