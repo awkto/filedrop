@@ -23,6 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loadFiles();
   setupEventListeners();
   setupDragAndDrop();
+  loadVersion();
+  loadDiskSpace();
+  // Refresh disk space every 30 seconds
+  setInterval(loadDiskSpace, 30000);
 });
 
 // Event Listeners
@@ -474,4 +478,46 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Load version information
+async function loadVersion() {
+  try {
+    const response = await fetch('/api/version');
+    const data = await response.json();
+    document.getElementById('version-text').textContent = `v${data.version}`;
+  } catch (error) {
+    console.error('Error loading version:', error);
+    document.getElementById('version-text').textContent = 'v?';
+  }
+}
+
+// Load disk space information
+async function loadDiskSpace() {
+  try {
+    const response = await fetch('/api/disk-space');
+    const data = await response.json();
+
+    const diskSpaceFill = document.getElementById('disk-space-fill');
+    const diskSpaceText = document.getElementById('disk-space-text');
+
+    // Update progress bar
+    diskSpaceFill.style.width = data.percentUsed + '%';
+
+    // Update color based on usage
+    diskSpaceFill.classList.remove('high-usage', 'critical-usage');
+    if (data.percentUsed >= 90) {
+      diskSpaceFill.classList.add('critical-usage');
+    } else if (data.percentUsed >= 75) {
+      diskSpaceFill.classList.add('high-usage');
+    }
+
+    // Format disk space text
+    const totalGB = (data.total / (1024 ** 3)).toFixed(1);
+    const freeGB = (data.free / (1024 ** 3)).toFixed(1);
+    diskSpaceText.textContent = `${freeGB} GB free of ${totalGB} GB (${data.percentUsed}% used)`;
+  } catch (error) {
+    console.error('Error loading disk space:', error);
+    document.getElementById('disk-space-text').textContent = 'Unable to load disk space';
+  }
 }
