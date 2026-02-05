@@ -5,6 +5,7 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const cors = require('cors');
 const archiver = require('archiver');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -270,6 +271,39 @@ app.delete('/api/delete/*', async (req, res) => {
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Version endpoint
+app.get('/api/version', async (req, res) => {
+  try {
+    const versionPath = path.join(__dirname, 'version.txt');
+    const version = await fs.readFile(versionPath, 'utf-8');
+    res.json({ version: version.trim() });
+  } catch (error) {
+    res.json({ version: 'unknown' });
+  }
+});
+
+// Disk space endpoint
+app.get('/api/disk-space', async (req, res) => {
+  try {
+    const uploadPath = path.resolve(UPLOAD_DIR);
+    const stats = await fs.statfs(uploadPath);
+
+    const total = stats.blocks * stats.bsize;
+    const free = stats.bfree * stats.bsize;
+    const used = total - free;
+
+    res.json({
+      total,
+      free,
+      used,
+      percentUsed: Math.round((used / total) * 100)
+    });
+  } catch (error) {
+    console.error('Error getting disk space:', error);
+    res.status(500).json({ error: 'Failed to get disk space information' });
+  }
 });
 
 // Start server

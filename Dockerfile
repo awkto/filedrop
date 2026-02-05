@@ -14,6 +14,12 @@ RUN npm ci --only=production
 COPY server.js ./
 COPY public ./public
 
+# Accept version as build argument
+ARG VERSION=dev
+
+# Write version to version.txt
+RUN echo "${VERSION}" > /app/version.txt
+
 # Create uploads directory
 RUN mkdir -p /app/uploads
 

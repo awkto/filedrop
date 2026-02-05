@@ -51,6 +51,8 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            VERSION=${{ steps.extract_version.outputs.VERSION }}
           tags: |
             ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.extract_version.outputs.VERSION }}
             ${{ env.DOCKER_IMAGE_NAME }}:latest
