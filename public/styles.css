@@ -19,6 +19,26 @@
   --border-color: #dee2e6;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --progress-bg: #e0e0e0;
+}
+
+/* Dark mode */
+[data-theme="dark"] {
+  --primary-color: #5ba3ff;
+  --primary-hover: #4a90e2;
+  --secondary-color: #8e99a4;
+  --secondary-hover: #a3adb8;
+  --danger-color: #ff5a6a;
+  --danger-hover: #ff7080;
+  --success-color: #4caf50;
+  --background: #1e1e1e;
+  --surface: #2a2a2a;
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --border-color: #3f3f46;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --progress-bg: #3a3a3a;
 }
 
 body {
@@ -26,6 +46,7 @@ body {
   background: var(--background);
   color: var(--text-primary);
   line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -37,6 +58,45 @@ body {
 header {
   text-align: center;
   padding: 40px 0;
+  position: relative;
+}
+
+.header-top {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.theme-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow);
+}
+
+.theme-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--primary-color);
+}
+
+.theme-icon {
+  font-size: 1.3rem;
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle:active .theme-icon {
+  transform: rotate(20deg);
 }
 
 header h1 {
@@ -56,6 +116,7 @@ main {
   border-radius: 12px;
   padding: 30px;
   box-shadow: var(--shadow);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Breadcrumb */
@@ -150,6 +211,23 @@ main {
 
 .btn-secondary:hover {
   background: var(--secondary-hover);
+}
+
+/* Dark mode button adjustments */
+[data-theme="dark"] .btn-primary {
+  background: #3a7bc8;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: #2d6ab4;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: #4a5568;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: #5a6575;
 }
 
 .btn-danger {
@@ -340,7 +418,7 @@ main {
 
 .progress-bar {
   height: 8px;
-  background: #e0e0e0;
+  background: var(--progress-bg);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -359,11 +437,15 @@ main {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+}
+
+[data-theme="dark"] .modal {
+  background: rgba(0, 0, 0, 0.8);
 }
 
 .modal-content {
@@ -527,7 +609,7 @@ main {
 
 .disk-space-bar {
   height: 12px;
-  background: #e0e0e0;
+  background: var(--progress-bg);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 4px;
