@@ -314,7 +314,7 @@ const server = app.listen(PORT, () => {
   console.log(`Access the web interface at http://localhost:${PORT}`);
 });
 
-// Increase server timeout for large file uploads (10 minutes)
-server.timeout = 600000;
-server.keepAliveTimeout = 610000;
-server.headersTimeout = 620000;
+// Increase server timeout for large file uploads and downloads (40 minutes)
+server.timeout = 2400000;
+server.keepAliveTimeout = 2410000;
+server.headersTimeout = 2420000;
