@@ -292,6 +292,9 @@ async function handleFileUpload() {
 
     const xhr = new XMLHttpRequest();
 
+    // Set timeout to 10 minutes for large file uploads
+    xhr.timeout = 600000;
+
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) {
         const percentComplete = Math.round((e.loaded / e.total) * 100);
@@ -316,6 +319,11 @@ async function handleFileUpload() {
 
     xhr.addEventListener('error', () => {
       alert('Upload failed. Please try again.');
+      uploadProgress.style.display = 'none';
+    });
+
+    xhr.addEventListener('timeout', () => {
+      alert('Upload timed out. The file may be too large or your connection too slow. Please try again.');
       uploadProgress.style.display = 'none';
     });
 

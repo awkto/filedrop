@@ -111,7 +111,12 @@ app.get('/api/files', async (req, res) => {
 });
 
 // Upload file(s)
-app.post('/api/upload', upload.array('files'), async (req, res) => {
+app.post('/api/upload', (req, res, next) => {
+  // Disable timeout for large file uploads
+  req.setTimeout(0);
+  res.setTimeout(0);
+  next();
+}, upload.array('files'), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
@@ -268,9 +273,14 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`FileDrop server running on port ${PORT}`);
   console.log(`Upload directory: ${path.resolve(UPLOAD_DIR)}`);
   console.log(`Max file size: ${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB`);
   console.log(`Access the web interface at http://localhost:${PORT}`);
 });
+
+// Increase server timeout for large file uploads (10 minutes)
+server.timeout = 600000;
+server.keepAliveTimeout = 610000;
+server.headersTimeout = 620000;
