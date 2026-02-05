@@ -20,6 +20,7 @@ const sortSelect = document.getElementById('sort-select');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  initializeTheme();
   loadFiles();
   setupEventListeners();
   setupDragAndDrop();
@@ -76,6 +77,9 @@ function setupEventListeners() {
     currentSort = e.target.value;
     renderFileList(cachedItems);
   });
+
+  // Theme toggle
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 }
 
 // Load files from server
@@ -469,6 +473,27 @@ function handleDroppedFiles(files) {
   // Set the files to the file input and trigger upload
   fileInput.files = dataTransfer.files;
   handleFileUpload();
+}
+
+// Theme functionality
+function initializeTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  applyTheme(savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  applyTheme(newTheme);
+  localStorage.setItem('theme', newTheme);
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const themeIcon = document.querySelector('.theme-icon');
+  if (themeIcon) {
+    themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+  }
 }
 
 // Utility functions
