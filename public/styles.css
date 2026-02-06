@@ -430,6 +430,14 @@ main {
   width: 0%;
 }
 
+.progress-details {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
 /* Modal */
 .modal {
   position: fixed;
