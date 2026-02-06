@@ -164,6 +164,68 @@ app.get('/api/download/*', async (req, res) => {
   }
 });
 
+// Download multiple items as zip
+app.post('/api/download-multi', express.json(), async (req, res) => {
+  try {
+    const { paths } = req.body;
+
+    if (!paths || !Array.isArray(paths) || paths.length === 0) {
+      return res.status(400).json({ error: 'No paths provided' });
+    }
+
+    // Set response headers
+    res.attachment('download.zip');
+    res.setHeader('Content-Type', 'application/zip');
+
+    // Create archive
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Maximum compression
+    });
+
+    // Handle errors
+    archive.on('error', (err) => {
+      console.error('Archive error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to create archive' });
+      }
+    });
+
+    // Pipe archive to response
+    archive.pipe(res);
+
+    // Add each path to archive
+    for (const relativePath of paths) {
+      const fullPath = getFullPath(relativePath);
+
+      try {
+        await fs.access(fullPath);
+        const stats = await fs.stat(fullPath);
+
+        if (stats.isDirectory()) {
+          // Add directory with its name as the base
+          const dirName = path.basename(fullPath);
+          archive.directory(fullPath, dirName);
+        } else {
+          // Add file with its name
+          const fileName = path.basename(fullPath);
+          archive.file(fullPath, { name: fileName });
+        }
+      } catch (error) {
+        console.error(`Error adding ${relativePath} to archive:`, error);
+        // Continue with other files even if one fails
+      }
+    }
+
+    // Finalize archive
+    await archive.finalize();
+  } catch (error) {
+    console.error('Error creating multi-file archive:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to create archive' });
+    }
+  }
+});
+
 // Download folder as zip
 app.get('/api/download-zip/*', async (req, res) => {
   try {
