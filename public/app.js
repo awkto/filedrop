@@ -303,11 +303,52 @@ async function handleFileUpload() {
     // Set timeout to 40 minutes for large file uploads
     xhr.timeout = 2400000;
 
+    // Variables for speed calculation
+    let startTime = Date.now();
+    let lastTime = startTime;
+    let lastLoaded = 0;
+    const speedSamples = [];
+    const maxSamples = 10; // Number of samples for averaging
+
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) {
-        const percentComplete = Math.round((e.loaded / e.total) * 100);
-        progressFill.style.width = percentComplete + '%';
-        progressText.textContent = percentComplete + '%';
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - lastTime) / 1000; // seconds
+        const bytesDiff = e.loaded - lastLoaded;
+
+        // Calculate current speed
+        if (timeDiff > 0.1) { // Update every 100ms
+          const currentSpeed = bytesDiff / timeDiff; // bytes per second
+
+          // Add to samples for averaging
+          speedSamples.push(currentSpeed);
+          if (speedSamples.length > maxSamples) {
+            speedSamples.shift(); // Remove oldest sample
+          }
+
+          // Calculate average speed
+          const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
+
+          // Update progress
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          progressFill.style.width = percentComplete + '%';
+          progressText.textContent = percentComplete + '%';
+
+          // Update size and speed display
+          const progressSize = document.getElementById('progress-size');
+          const progressSpeed = document.getElementById('progress-speed');
+
+          if (progressSize) {
+            progressSize.textContent = `${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+          }
+
+          if (progressSpeed) {
+            progressSpeed.textContent = `${formatBytes(avgSpeed)}/s`;
+          }
+
+          lastTime = currentTime;
+          lastLoaded = e.loaded;
+        }
       }
     });
 
@@ -318,6 +359,7 @@ async function handleFileUpload() {
           uploadProgress.style.display = 'none';
           fileInput.value = ''; // Reset input
           loadFiles(currentPath); // Reload file list
+          loadDiskSpace(); // Refresh disk space
         }, 500);
       } else {
         alert('Upload failed. Please try again.');
