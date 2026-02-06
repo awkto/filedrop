@@ -583,32 +583,19 @@ function clearSelection() {
 
 function updateSelectionUI() {
   const infoBar = document.getElementById('info-bar');
-  const fileInfo = document.getElementById('file-info');
-  const selectionInfo = document.getElementById('selection-info');
-  const selectionActions = document.getElementById('selection-actions');
   const selectionCount = document.getElementById('selection-count');
   const selectAllBtn = document.getElementById('select-all-btn');
 
-  // Update selection count and toggle between file info and selection info
   if (selectedItems.size > 0) {
-    // Show selection state
     infoBar.classList.add('has-selection');
-    fileInfo.style.display = 'none';
-    selectionInfo.style.display = 'block';
-    selectionActions.style.display = 'flex';
     selectionCount.textContent = `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} selected`;
     selectAllBtn.style.display = 'block';
 
-    // Update select all button icon
     const allSelected = selectedItems.size === cachedItems.length && cachedItems.length > 0;
     selectAllBtn.querySelector('.icon').textContent = allSelected ? '☐' : '☑️';
     selectAllBtn.title = allSelected ? 'Deselect all' : 'Select all';
   } else {
-    // Show file info state
     infoBar.classList.remove('has-selection');
-    fileInfo.style.display = 'block';
-    selectionInfo.style.display = 'none';
-    selectionActions.style.display = 'none';
     selectAllBtn.style.display = 'none';
   }
 

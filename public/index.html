@@ -59,15 +59,15 @@
       <!-- Info/Selection bar -->
       <div id="info-bar" class="info-bar">
         <!-- Default state: show file info -->
-        <div id="file-info" class="file-info">
+        <div id="file-info" class="file-info-text">
           <span id="file-count">0 items</span>
         </div>
 
-        <!-- Selection state: show selection actions -->
-        <div id="selection-info" class="selection-info" style="display: none;">
+        <!-- Selection state: show selection actions (always in layout, hidden visually) -->
+        <div id="selection-info" class="selection-info-text">
           <span id="selection-count">0 items selected</span>
         </div>
-        <div id="selection-actions" class="selection-actions" style="display: none;">
+        <div id="selection-actions" class="selection-actions">
           <button id="delete-selected-btn" class="btn btn-danger">
             <span class="icon">🗑️</span> Delete Selected
           </button>

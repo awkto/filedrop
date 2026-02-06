@@ -207,23 +207,35 @@ main {
   color: white;
 }
 
-.file-info {
+.file-info-text {
   font-weight: 500;
   color: var(--text-secondary);
 }
 
-.info-bar.has-selection .file-info {
-  display: none;
-}
-
-.selection-info {
+.selection-info-text {
   font-weight: 500;
-  color: white;
+  visibility: hidden;
 }
 
 .selection-actions {
   display: flex;
   gap: 10px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.info-bar.has-selection .file-info-text {
+  display: none;
+}
+
+.info-bar.has-selection .selection-info-text {
+  visibility: visible;
+  color: white;
+}
+
+.info-bar.has-selection .selection-actions {
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .selection-actions .btn {
