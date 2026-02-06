@@ -647,38 +647,12 @@ function updateFileCount() {
   }
 }
 
-async function downloadSelected() {
+function downloadSelected() {
   if (selectedItems.size === 0) return;
 
-  try {
-    const paths = Array.from(selectedItems);
-
-    const response = await fetch('/api/download-multi', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ paths })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to download files');
-    }
-
-    // Create blob from response and trigger download
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'download.zip';
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  } catch (error) {
-    console.error('Error downloading selected items:', error);
-    alert('Failed to download selected items. Please try again.');
-  }
+  const paths = Array.from(selectedItems);
+  const pathsParam = encodeURIComponent(paths.join(','));
+  window.location.href = `/api/download-multi?paths=${pathsParam}`;
 }
 
 async function deleteSelected() {
