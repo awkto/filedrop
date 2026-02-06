@@ -165,11 +165,18 @@ app.get('/api/download/*', async (req, res) => {
 });
 
 // Download multiple items as zip
-app.post('/api/download-multi', express.json(), async (req, res) => {
+app.get('/api/download-multi', async (req, res) => {
   try {
-    const { paths } = req.body;
+    const pathsParam = req.query.paths;
 
-    if (!paths || !Array.isArray(paths) || paths.length === 0) {
+    if (!pathsParam) {
+      return res.status(400).json({ error: 'No paths provided' });
+    }
+
+    // Parse paths from query parameter (comma-separated)
+    const paths = pathsParam.split(',').filter(p => p.trim());
+
+    if (paths.length === 0) {
       return res.status(400).json({ error: 'No paths provided' });
     }
 
