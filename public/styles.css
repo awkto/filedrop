@@ -70,7 +70,8 @@ header {
   align-items: center;
 }
 
-.theme-toggle {
+.theme-toggle,
+.settings-btn {
   background: var(--surface);
   border: 1px solid var(--border-color);
   border-radius: 50%;
@@ -84,19 +85,25 @@ header {
   box-shadow: var(--shadow);
 }
 
-.theme-toggle:hover {
+.theme-toggle:hover,
+.settings-btn:hover {
   transform: scale(1.05);
   box-shadow: var(--shadow-hover);
   border-color: var(--primary-color);
 }
 
-.theme-icon {
+.theme-icon,
+.settings-icon {
   font-size: 1.3rem;
   transition: transform 0.3s ease;
 }
 
 .theme-toggle:active .theme-icon {
   transform: rotate(20deg);
+}
+
+.settings-btn:active .settings-icon {
+  transform: rotate(90deg);
 }
 
 header h1 {
@@ -514,6 +521,51 @@ main {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+}
+
+/* Settings Modal */
+.settings-section {
+  margin-bottom: 20px;
+}
+
+.setting-item {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.setting-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+.setting-text {
+  user-select: none;
+}
+
+.setting-description {
+  margin-top: 6px;
+  margin-left: 28px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 /* Drag and Drop */
