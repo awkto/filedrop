@@ -471,7 +471,13 @@ main {
   box-shadow: var(--shadow);
 }
 
-.file-item.folder {
+.file-item.folder,
+.file-item.file {
+  cursor: pointer;
+}
+
+.file-table tbody tr.folder,
+.file-table tbody tr.file {
   cursor: pointer;
 }
 
