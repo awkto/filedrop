@@ -4,6 +4,7 @@ let dragCounter = 0;
 let currentView = 'grid'; // 'grid' or 'table'
 let currentSort = 'name-asc';
 let cachedItems = [];
+let selectedItems = new Set(); // Paths of selected items
 let settings = {
   confirmDelete: true
 };
@@ -107,6 +108,11 @@ function setupEventListeners() {
     settings.confirmDelete = e.target.checked;
     saveSettings();
   });
+
+  // Multi-select
+  document.getElementById('select-all-btn').addEventListener('click', toggleSelectAll);
+  document.getElementById('clear-selection-btn').addEventListener('click', clearSelection);
+  document.getElementById('delete-selected-btn').addEventListener('click', deleteSelected);
 }
 
 // Load files from server
@@ -114,6 +120,9 @@ async function loadFiles(path = '') {
   try {
     currentPath = path;
     fileList.innerHTML = '<div class="loading">Loading files...</div>';
+
+    // Clear selection when navigating
+    clearSelection();
 
     const response = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
 
@@ -194,9 +203,11 @@ function renderGridView(items) {
     const icon = item.type === 'folder' ? '📁' : '📄';
     const sizeText = item.type === 'file' ? formatBytes(item.size) : '';
     const dateText = new Date(item.modified).toLocaleString();
+    const isSelected = selectedItems.has(item.path);
 
     return `
-      <div class="file-item ${item.type}" data-path="${escapeHtml(item.path)}" data-type="${item.type}">
+      <div class="file-item ${item.type} ${isSelected ? 'selected' : ''}" data-path="${escapeHtml(item.path)}" data-type="${item.type}">
+        <input type="checkbox" class="file-item-checkbox" ${isSelected ? 'checked' : ''} data-path="${escapeHtml(item.path)}">
         <div class="file-icon">${icon}</div>
         <div class="file-info">
           <div class="file-name">${escapeHtml(item.name)}</div>
@@ -212,10 +223,17 @@ function renderGridView(items) {
     `;
   }).join('');
 
+  // Add checkbox handlers
+  document.querySelectorAll('.file-item-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('click', (e) => {
+      toggleItemSelection(checkbox.dataset.path, e);
+    });
+  });
+
   // Add click handlers for folders
   document.querySelectorAll('.file-item.folder').forEach(item => {
     item.addEventListener('click', (e) => {
-      if (!e.target.closest('.file-actions')) {
+      if (!e.target.closest('.file-actions') && !e.target.classList.contains('file-item-checkbox')) {
         navigateToPath(item.dataset.path);
       }
     });
@@ -229,6 +247,7 @@ function renderTableView(items) {
     <table class="file-table">
       <thead>
         <tr>
+          <th class="file-checkbox-cell"></th>
           <th class="file-icon-cell"></th>
           <th class="file-name-cell">Name</th>
           <th class="file-size-cell">Size</th>
@@ -241,9 +260,13 @@ function renderTableView(items) {
           const icon = item.type === 'folder' ? '📁' : '📄';
           const sizeText = item.type === 'file' ? formatBytes(item.size) : '—';
           const dateText = new Date(item.modified).toLocaleString();
+          const isSelected = selectedItems.has(item.path);
 
           return `
-            <tr class="${item.type}" data-path="${escapeHtml(item.path)}" data-type="${item.type}">
+            <tr class="${item.type} ${isSelected ? 'selected' : ''}" data-path="${escapeHtml(item.path)}" data-type="${item.type}">
+              <td class="file-checkbox-cell">
+                <input type="checkbox" class="file-item-checkbox" ${isSelected ? 'checked' : ''} data-path="${escapeHtml(item.path)}">
+              </td>
               <td class="file-icon-cell">${icon}</td>
               <td class="file-name-cell">${escapeHtml(item.name)}</td>
               <td class="file-size-cell">${sizeText}</td>
@@ -261,10 +284,18 @@ function renderTableView(items) {
     </table>
   `;
 
+  // Add checkbox handlers
+  document.querySelectorAll('.file-item-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleItemSelection(checkbox.dataset.path, e);
+    });
+  });
+
   // Add click handlers for folders in table view
   document.querySelectorAll('.file-table tbody tr.folder').forEach(row => {
     row.addEventListener('click', (e) => {
-      if (!e.target.closest('.file-actions-cell')) {
+      if (!e.target.closest('.file-actions-cell') && !e.target.classList.contains('file-item-checkbox')) {
         navigateToPath(row.dataset.path);
       }
     });
@@ -517,6 +548,96 @@ function downloadFile(path) {
 // Download folder as zip
 function downloadFolder(path) {
   window.location.href = `/api/download-zip/${path}`;
+}
+
+// Multi-select functions
+function toggleItemSelection(path, event) {
+  event.stopPropagation();
+
+  if (selectedItems.has(path)) {
+    selectedItems.delete(path);
+  } else {
+    selectedItems.add(path);
+  }
+
+  updateSelectionUI();
+}
+
+function toggleSelectAll() {
+  if (selectedItems.size === cachedItems.length && cachedItems.length > 0) {
+    // Deselect all
+    clearSelection();
+  } else {
+    // Select all
+    selectedItems.clear();
+    cachedItems.forEach(item => selectedItems.add(item.path));
+    updateSelectionUI();
+  }
+}
+
+function clearSelection() {
+  selectedItems.clear();
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  const selectionBar = document.getElementById('selection-bar');
+  const selectionCount = document.getElementById('selection-count');
+  const selectAllBtn = document.getElementById('select-all-btn');
+
+  // Update selection count and show/hide bar
+  if (selectedItems.size > 0) {
+    selectionBar.style.display = 'flex';
+    selectionCount.textContent = `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} selected`;
+    selectAllBtn.style.display = 'block';
+
+    // Update select all button icon
+    const allSelected = selectedItems.size === cachedItems.length && cachedItems.length > 0;
+    selectAllBtn.querySelector('.icon').textContent = allSelected ? '☐' : '☑️';
+    selectAllBtn.title = allSelected ? 'Deselect all' : 'Select all';
+  } else {
+    selectionBar.style.display = 'none';
+    selectAllBtn.style.display = 'none';
+  }
+
+  // Update visual state of items
+  renderFileList(cachedItems);
+}
+
+async function deleteSelected() {
+  if (selectedItems.size === 0) return;
+
+  // Check if delete confirmation is enabled in settings
+  if (settings.confirmDelete) {
+    const confirmMessage = `Are you sure you want to delete ${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''}?`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+  }
+
+  try {
+    // Delete all selected items
+    const deletePromises = Array.from(selectedItems).map(path =>
+      fetch(`/api/delete/${path}`, { method: 'DELETE' })
+    );
+
+    const results = await Promise.allSettled(deletePromises);
+
+    // Check for failures
+    const failures = results.filter(r => r.status === 'rejected' || (r.value && !r.value.ok));
+
+    if (failures.length > 0) {
+      alert(`Failed to delete ${failures.length} item${failures.length > 1 ? 's' : ''}. Please try again.`);
+    }
+
+    // Clear selection and reload
+    clearSelection();
+    loadFiles(currentPath);
+    loadDiskSpace();
+  } catch (error) {
+    console.error('Error deleting items:', error);
+    alert('Failed to delete items. Please try again.');
+  }
 }
 
 // Delete file or folder
