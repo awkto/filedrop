@@ -187,10 +187,10 @@ main {
   box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
 }
 
-/* Selection Bar */
-.selection-bar {
-  background: var(--primary-color);
-  color: white;
+/* Info/Selection Bar */
+.info-bar {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
   padding: 12px 20px;
   border-radius: 8px;
   margin-bottom: 20px;
@@ -198,10 +198,28 @@ main {
   justify-content: space-between;
   align-items: center;
   box-shadow: var(--shadow);
+  min-height: 48px;
+  transition: all 0.3s ease;
+}
+
+.info-bar.has-selection {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.file-info {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.info-bar.has-selection .file-info {
+  display: none;
 }
 
 .selection-info {
   font-weight: 500;
+  color: white;
 }
 
 .selection-actions {

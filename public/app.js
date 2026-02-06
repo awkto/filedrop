@@ -134,6 +134,7 @@ async function loadFiles(path = '') {
     cachedItems = data.items;
     renderFileList(cachedItems);
     updateBreadcrumb(path);
+    updateFileCount();
   } catch (error) {
     console.error('Error loading files:', error);
     fileList.innerHTML = '<div class="empty-state">Failed to load files. Please try again.</div>';
@@ -581,13 +582,20 @@ function clearSelection() {
 }
 
 function updateSelectionUI() {
-  const selectionBar = document.getElementById('selection-bar');
+  const infoBar = document.getElementById('info-bar');
+  const fileInfo = document.getElementById('file-info');
+  const selectionInfo = document.getElementById('selection-info');
+  const selectionActions = document.getElementById('selection-actions');
   const selectionCount = document.getElementById('selection-count');
   const selectAllBtn = document.getElementById('select-all-btn');
 
-  // Update selection count and show/hide bar
+  // Update selection count and toggle between file info and selection info
   if (selectedItems.size > 0) {
-    selectionBar.style.display = 'flex';
+    // Show selection state
+    infoBar.classList.add('has-selection');
+    fileInfo.style.display = 'none';
+    selectionInfo.style.display = 'block';
+    selectionActions.style.display = 'flex';
     selectionCount.textContent = `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} selected`;
     selectAllBtn.style.display = 'block';
 
@@ -596,12 +604,30 @@ function updateSelectionUI() {
     selectAllBtn.querySelector('.icon').textContent = allSelected ? '☐' : '☑️';
     selectAllBtn.title = allSelected ? 'Deselect all' : 'Select all';
   } else {
-    selectionBar.style.display = 'none';
+    // Show file info state
+    infoBar.classList.remove('has-selection');
+    fileInfo.style.display = 'block';
+    selectionInfo.style.display = 'none';
+    selectionActions.style.display = 'none';
     selectAllBtn.style.display = 'none';
   }
 
   // Update visual state of items
   renderFileList(cachedItems);
+}
+
+function updateFileCount() {
+  const fileCount = document.getElementById('file-count');
+  if (fileCount && cachedItems) {
+    const folders = cachedItems.filter(item => item.type === 'folder').length;
+    const files = cachedItems.filter(item => item.type === 'file').length;
+
+    const parts = [];
+    if (files > 0) parts.push(`${files} file${files !== 1 ? 's' : ''}`);
+    if (folders > 0) parts.push(`${folders} folder${folders !== 1 ? 's' : ''}`);
+
+    fileCount.textContent = parts.length > 0 ? parts.join(', ') : 'Empty folder';
+  }
 }
 
 async function deleteSelected() {

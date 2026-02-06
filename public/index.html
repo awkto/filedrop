@@ -56,12 +56,18 @@
         </div>
       </div>
 
-      <!-- Selection action bar -->
-      <div id="selection-bar" class="selection-bar" style="display: none;">
-        <div class="selection-info">
+      <!-- Info/Selection bar -->
+      <div id="info-bar" class="info-bar">
+        <!-- Default state: show file info -->
+        <div id="file-info" class="file-info">
+          <span id="file-count">0 items</span>
+        </div>
+
+        <!-- Selection state: show selection actions -->
+        <div id="selection-info" class="selection-info" style="display: none;">
           <span id="selection-count">0 items selected</span>
         </div>
-        <div class="selection-actions">
+        <div id="selection-actions" class="selection-actions" style="display: none;">
           <button id="delete-selected-btn" class="btn btn-danger">
             <span class="icon">🗑️</span> Delete Selected
           </button>
