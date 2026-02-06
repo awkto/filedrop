@@ -286,11 +286,12 @@ async function handleFileUpload() {
 
   const formData = new FormData();
 
+  // IMPORTANT: Append folder BEFORE files so multer can read it when determining destination
+  formData.append('folder', currentPath);
+
   for (let i = 0; i < files.length; i++) {
     formData.append('files', files[i]);
   }
-
-  formData.append('folder', currentPath);
 
   try {
     // Show progress
