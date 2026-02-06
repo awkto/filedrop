@@ -237,11 +237,19 @@ function renderGridView(items) {
     });
   });
 
-  // Add click handlers for folders
+  // Add click handlers for folders and files
   document.querySelectorAll('.file-item.folder').forEach(item => {
     item.addEventListener('click', (e) => {
       if (!e.target.closest('.file-actions') && !e.target.classList.contains('file-item-checkbox')) {
         navigateToPath(item.dataset.path);
+      }
+    });
+  });
+
+  document.querySelectorAll('.file-item.file').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (!e.target.closest('.file-actions') && !e.target.classList.contains('file-item-checkbox')) {
+        downloadFile(item.dataset.path);
       }
     });
   });
@@ -304,6 +312,15 @@ function renderTableView(items) {
     row.addEventListener('click', (e) => {
       if (!e.target.closest('.file-actions-cell') && !e.target.classList.contains('file-item-checkbox')) {
         navigateToPath(row.dataset.path);
+      }
+    });
+  });
+
+  // Add click handlers for files in table view
+  document.querySelectorAll('.file-table tbody tr.file').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (!e.target.closest('.file-actions-cell') && !e.target.classList.contains('file-item-checkbox')) {
+        downloadFile(row.dataset.path);
       }
     });
   });
