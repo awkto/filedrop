@@ -289,6 +289,17 @@ async function handleFileUpload() {
   // IMPORTANT: Append folder BEFORE files so multer can read it when determining destination
   formData.append('folder', currentPath);
 
+  // Track file information for multi-file uploads
+  const fileList = Array.from(files);
+  const fileSizes = fileList.map(f => f.size);
+  const totalFiles = fileList.length;
+  const cumulativeSizes = [];
+  let cumulative = 0;
+  for (let i = 0; i < fileSizes.length; i++) {
+    cumulativeSizes.push(cumulative);
+    cumulative += fileSizes[i];
+  }
+
   for (let i = 0; i < files.length; i++) {
     formData.append('files', files[i]);
   }
@@ -298,6 +309,22 @@ async function handleFileUpload() {
     uploadProgress.style.display = 'block';
     progressFill.style.width = '0%';
     progressText.textContent = '0%';
+
+    // Reset or show multi-file details
+    const multiFileSection = document.getElementById('progress-multi-file');
+    const progressTitle = document.getElementById('progress-title');
+
+    if (totalFiles > 1) {
+      multiFileSection.style.display = 'block';
+      if (progressTitle) {
+        progressTitle.textContent = `Uploading file 1 of ${totalFiles}`;
+      }
+    } else {
+      multiFileSection.style.display = 'none';
+      if (progressTitle) {
+        progressTitle.textContent = 'Uploading...';
+      }
+    }
 
     const xhr = new XMLHttpRequest();
 
@@ -345,6 +372,40 @@ async function handleFileUpload() {
 
           if (progressSpeed) {
             progressSpeed.textContent = `${formatBytes(avgSpeed)}/s`;
+          }
+
+          // Update multi-file progress if uploading multiple files
+          if (totalFiles > 1) {
+            // Find current file being uploaded
+            let currentFileIndex = 0;
+            let filesCompleted = 0;
+
+            for (let i = 0; i < cumulativeSizes.length; i++) {
+              if (e.loaded >= cumulativeSizes[i] + fileSizes[i]) {
+                filesCompleted = i + 1;
+                currentFileIndex = Math.min(i + 1, totalFiles - 1);
+              } else if (e.loaded >= cumulativeSizes[i]) {
+                currentFileIndex = i;
+                break;
+              }
+            }
+
+            // Update current file name
+            const currentFileName = document.getElementById('current-file-name');
+            const filesCompletedEl = document.getElementById('files-completed');
+            const progressTitle = document.getElementById('progress-title');
+
+            if (currentFileName && fileList[currentFileIndex]) {
+              currentFileName.textContent = fileList[currentFileIndex].name;
+            }
+
+            if (filesCompletedEl) {
+              filesCompletedEl.textContent = `${filesCompleted} / ${totalFiles} files completed`;
+            }
+
+            if (progressTitle) {
+              progressTitle.textContent = `Uploading file ${currentFileIndex + 1} of ${totalFiles}`;
+            }
           }
 
           lastTime = currentTime;
