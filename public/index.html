@@ -39,6 +39,9 @@
         <input type="file" id="file-input" multiple style="display: none;">
 
         <div class="actions-right">
+          <button id="select-all-btn" class="btn btn-secondary" title="Select all" style="display: none;">
+            <span class="icon">☑️</span>
+          </button>
           <button id="view-toggle-btn" class="btn btn-secondary" title="Toggle view">
             <span class="icon">📋</span>
           </button>
@@ -50,6 +53,19 @@
             <option value="date-asc">Date (Old)</option>
             <option value="date-desc">Date (New)</option>
           </select>
+        </div>
+      </div>
+
+      <!-- Selection action bar -->
+      <div id="selection-bar" class="selection-bar" style="display: none;">
+        <div class="selection-info">
+          <span id="selection-count">0 items selected</span>
+        </div>
+        <div class="selection-actions">
+          <button id="delete-selected-btn" class="btn btn-danger">
+            <span class="icon">🗑️</span> Delete Selected
+          </button>
+          <button id="clear-selection-btn" class="btn btn-secondary">Clear Selection</button>
         </div>
       </div>
 
