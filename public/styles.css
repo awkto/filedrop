@@ -613,18 +613,21 @@ main {
   cursor: pointer;
   font-weight: 500;
   color: var(--text-primary);
+  gap: 12px;
 }
 
 .setting-checkbox {
   width: 18px;
   height: 18px;
-  margin-right: 10px;
+  flex-shrink: 0;
   cursor: pointer;
   accent-color: var(--primary-color);
 }
 
 .setting-text {
   user-select: none;
+  flex: 1;
+  white-space: nowrap;
 }
 
 .setting-description {
