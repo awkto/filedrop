@@ -29,9 +29,15 @@ const confirmDeleteToggle = document.getElementById('confirm-delete-toggle');
 document.addEventListener('DOMContentLoaded', () => {
   initializeTheme();
   loadSettings();
-  loadFiles();
+
+  // Load initial path from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialPath = urlParams.get('path') || '';
+  loadFiles(initialPath);
+
   setupEventListeners();
   setupDragAndDrop();
+  setupBrowserNavigation();
   loadVersion();
   loadDiskSpace();
   // Refresh disk space every 30 seconds
@@ -331,7 +337,13 @@ function updateBreadcrumb(path) {
 }
 
 // Navigate to path
-function navigateToPath(path) {
+function navigateToPath(path, skipHistory = false) {
+  // Update browser history
+  if (!skipHistory) {
+    const url = path ? `?path=${encodeURIComponent(path)}` : '/';
+    window.history.pushState({ path }, '', url);
+  }
+
   loadFiles(path);
 }
 
@@ -761,6 +773,22 @@ function applyTheme(theme) {
   const themeIcon = document.querySelector('.theme-icon');
   if (themeIcon) {
     themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+  }
+}
+
+// Browser navigation
+function setupBrowserNavigation() {
+  // Handle browser back/forward buttons
+  window.addEventListener('popstate', (event) => {
+    const path = event.state?.path || '';
+    navigateToPath(path, true); // skipHistory = true to avoid adding duplicate history entry
+  });
+
+  // Set initial history state if not already set
+  if (!window.history.state) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const path = urlParams.get('path') || '';
+    window.history.replaceState({ path }, '', window.location.href);
   }
 }
 
