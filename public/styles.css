@@ -438,6 +438,32 @@ main {
   color: var(--text-secondary);
 }
 
+.progress-multi-file {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.progress-current-file {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.progress-current-file .label {
+  color: var(--text-secondary);
+  margin-right: 6px;
+}
+
+.progress-current-file #current-file-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.progress-file-stats {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
 /* Modal */
 .modal {
   position: fixed;
