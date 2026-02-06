@@ -10,6 +10,9 @@
   <div class="container">
     <header>
       <div class="header-top">
+        <button id="settings-btn" class="settings-btn" title="Settings">
+          <span class="settings-icon">⚙️</span>
+        </button>
         <button id="theme-toggle" class="theme-toggle" title="Toggle dark mode">
           <span class="theme-icon">🌙</span>
         </button>
@@ -111,6 +114,25 @@
       <div class="modal-actions">
         <button id="cancel-folder-btn" class="btn btn-secondary">Cancel</button>
         <button id="create-folder-btn" class="btn btn-primary">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="settings-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Settings</h2>
+      <div class="settings-section">
+        <div class="setting-item">
+          <label class="setting-label">
+            <input type="checkbox" id="confirm-delete-toggle" class="setting-checkbox" checked>
+            <span class="setting-text">Show delete confirmation</span>
+          </label>
+          <p class="setting-description">Ask for confirmation before deleting files and folders</p>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="close-settings-btn" class="btn btn-primary">Close</button>
       </div>
     </div>
   </div>
