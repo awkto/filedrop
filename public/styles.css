@@ -52,20 +52,20 @@ body {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 12px 20px;
 }
 
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
-  margin-bottom: 12px;
+  padding: 8px 0;
+  margin-bottom: 8px;
 }
 
 header h1 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.6rem;
 }
 
 .header-actions {
@@ -120,15 +120,15 @@ header h1 {
 main {
   background: var(--surface);
   border-radius: 12px;
-  padding: 30px;
+  padding: 20px;
   box-shadow: var(--shadow);
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Breadcrumb */
 .breadcrumb {
-  margin-bottom: 16px;
-  padding: 6px 0;
+  margin-bottom: 12px;
+  padding: 4px 0;
   border-bottom: 1px solid var(--border-color);
   font-size: 0.95rem;
 }
