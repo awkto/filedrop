@@ -1,7 +1,7 @@
 // State
 let currentPath = '';
 let dragCounter = 0;
-let currentView = 'grid'; // 'grid' or 'table'
+let currentView = 'table'; // 'grid' or 'table'
 let currentSort = 'name-asc';
 let cachedItems = [];
 let selectedItems = new Set(); // Paths of selected items
@@ -150,7 +150,7 @@ async function loadFiles(path = '') {
 // Toggle view
 function toggleView() {
   currentView = currentView === 'grid' ? 'table' : 'grid';
-  viewToggleBtn.querySelector('.icon').textContent = currentView === 'grid' ? '📋' : '📊';
+  viewToggleBtn.querySelector('.icon').textContent = currentView === 'table' ? '⊞' : '📊';
   renderFileList(cachedItems);
 }
 
@@ -618,7 +618,7 @@ function updateSelectionUI() {
   // Update select all button icon based on selection state
   if (cachedItems.length > 0) {
     const allSelected = selectedItems.size === cachedItems.length;
-    selectAllBtn.querySelector('.icon').textContent = allSelected ? '☐' : '☑️';
+    selectAllBtn.querySelector('.icon').textContent = allSelected ? '☑️' : '☐';
     selectAllBtn.title = allSelected ? 'Deselect all' : 'Select all';
   }
 
