@@ -268,16 +268,6 @@ main {
   pointer-events: auto;
 }
 
-.selection-actions .btn {
-  background: white;
-  color: var(--text-primary);
-}
-
-.selection-actions .btn-danger {
-  background: var(--danger-color);
-  color: white;
-}
-
 .selection-actions .btn:hover {
   transform: translateY(-1px);
 }
@@ -348,6 +338,15 @@ main {
 
 [data-theme="dark"] .btn-secondary:hover {
   background: #5a6575;
+}
+
+.btn-success {
+  background: var(--success-color);
+  color: white;
+}
+
+.btn-success:hover {
+  background: #218838;
 }
 
 .btn-danger {
