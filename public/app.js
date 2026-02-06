@@ -4,6 +4,9 @@ let dragCounter = 0;
 let currentView = 'grid'; // 'grid' or 'table'
 let currentSort = 'name-asc';
 let cachedItems = [];
+let settings = {
+  confirmDelete: true
+};
 
 // DOM Elements
 const fileList = document.getElementById('file-list');
@@ -17,10 +20,14 @@ const folderNameInput = document.getElementById('folder-name');
 const dropOverlay = document.getElementById('drop-overlay');
 const viewToggleBtn = document.getElementById('view-toggle-btn');
 const sortSelect = document.getElementById('sort-select');
+const settingsModal = document.getElementById('settings-modal');
+const settingsBtn = document.getElementById('settings-btn');
+const confirmDeleteToggle = document.getElementById('confirm-delete-toggle');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   initializeTheme();
+  loadSettings();
   loadFiles();
   setupEventListeners();
   setupDragAndDrop();
@@ -80,6 +87,26 @@ function setupEventListeners() {
 
   // Theme toggle
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+  // Settings
+  settingsBtn.addEventListener('click', () => {
+    settingsModal.style.display = 'flex';
+  });
+
+  document.getElementById('close-settings-btn').addEventListener('click', () => {
+    settingsModal.style.display = 'none';
+  });
+
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+      settingsModal.style.display = 'none';
+    }
+  });
+
+  confirmDeleteToggle.addEventListener('change', (e) => {
+    settings.confirmDelete = e.target.checked;
+    saveSettings();
+  });
 }
 
 // Load files from server
@@ -494,11 +521,14 @@ function downloadFolder(path) {
 
 // Delete file or folder
 async function deleteItem(path, type) {
-  const itemType = type === 'folder' ? 'folder' : 'file';
-  const confirmMessage = `Are you sure you want to delete this ${itemType}?${type === 'folder' ? ' All contents will be deleted.' : ''}`;
+  // Check if delete confirmation is enabled in settings
+  if (settings.confirmDelete) {
+    const itemType = type === 'folder' ? 'folder' : 'file';
+    const confirmMessage = `Are you sure you want to delete this ${itemType}?${type === 'folder' ? ' All contents will be deleted.' : ''}`;
 
-  if (!confirm(confirmMessage)) {
-    return;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
   }
 
   try {
@@ -597,6 +627,31 @@ function applyTheme(theme) {
   const themeIcon = document.querySelector('.theme-icon');
   if (themeIcon) {
     themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+  }
+}
+
+// Settings functionality
+function loadSettings() {
+  try {
+    const savedSettings = localStorage.getItem('filedrop-settings');
+    if (savedSettings) {
+      settings = { ...settings, ...JSON.parse(savedSettings) };
+    }
+
+    // Update UI to reflect loaded settings
+    if (confirmDeleteToggle) {
+      confirmDeleteToggle.checked = settings.confirmDelete;
+    }
+  } catch (error) {
+    console.error('Error loading settings:', error);
+  }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem('filedrop-settings', JSON.stringify(settings));
+  } catch (error) {
+    console.error('Error saving settings:', error);
   }
 }
 
