@@ -39,9 +39,6 @@
         <input type="file" id="file-input" multiple style="display: none;">
 
         <div class="actions-right">
-          <button id="select-all-btn" class="btn btn-secondary" title="Select all">
-            <span class="icon">☑️</span>
-          </button>
           <button id="view-toggle-btn" class="btn btn-secondary" title="Toggle view">
             <span class="icon">📋</span>
           </button>
@@ -58,15 +55,23 @@
 
       <!-- Info/Selection bar -->
       <div id="info-bar" class="info-bar">
-        <!-- Default state: show file info -->
-        <div id="file-info" class="file-info-text">
-          <span id="file-count">0 items</span>
+        <div class="info-bar-left">
+          <button id="select-all-btn" class="select-toggle-btn" title="Select all">
+            <span class="icon">☑️</span>
+          </button>
+
+          <!-- Default state: show file info -->
+          <div id="file-info" class="file-info-text">
+            <span id="file-count">0 items</span>
+          </div>
+
+          <!-- Selection state: show selection info (always in layout, hidden visually) -->
+          <div id="selection-info" class="selection-info-text">
+            <span id="selection-count">0 items selected</span>
+          </div>
         </div>
 
-        <!-- Selection state: show selection actions (always in layout, hidden visually) -->
-        <div id="selection-info" class="selection-info-text">
-          <span id="selection-count">0 items selected</span>
-        </div>
+        <!-- Selection actions (always in layout, hidden visually) -->
         <div id="selection-actions" class="selection-actions">
           <button id="download-selected-btn" class="btn btn-primary">
             <span class="icon">📥</span> Download Selected
