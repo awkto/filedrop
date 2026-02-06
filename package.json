@@ -1,6 +1,6 @@
 {
   "name": "filedrop",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Simple file drop web server for uploading and downloading files",
   "main": "server.js",
   "scripts": {
