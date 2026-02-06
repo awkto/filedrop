@@ -117,7 +117,7 @@ function setupEventListeners() {
 
   // Multi-select
   document.getElementById('select-all-btn').addEventListener('click', toggleSelectAll);
-  document.getElementById('clear-selection-btn').addEventListener('click', clearSelection);
+  document.getElementById('download-selected-btn').addEventListener('click', downloadSelected);
   document.getElementById('delete-selected-btn').addEventListener('click', deleteSelected);
 }
 
@@ -598,17 +598,18 @@ function updateSelectionUI() {
   const selectionCount = document.getElementById('selection-count');
   const selectAllBtn = document.getElementById('select-all-btn');
 
+  // Update select all button icon based on selection state
+  if (cachedItems.length > 0) {
+    const allSelected = selectedItems.size === cachedItems.length;
+    selectAllBtn.querySelector('.icon').textContent = allSelected ? '☐' : '☑️';
+    selectAllBtn.title = allSelected ? 'Deselect all' : 'Select all';
+  }
+
   if (selectedItems.size > 0) {
     infoBar.classList.add('has-selection');
     selectionCount.textContent = `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} selected`;
-    selectAllBtn.style.display = 'block';
-
-    const allSelected = selectedItems.size === cachedItems.length && cachedItems.length > 0;
-    selectAllBtn.querySelector('.icon').textContent = allSelected ? '☐' : '☑️';
-    selectAllBtn.title = allSelected ? 'Deselect all' : 'Select all';
   } else {
     infoBar.classList.remove('has-selection');
-    selectAllBtn.style.display = 'none';
   }
 
   // Update visual state of items
@@ -626,6 +627,40 @@ function updateFileCount() {
     if (folders > 0) parts.push(`${folders} folder${folders !== 1 ? 's' : ''}`);
 
     fileCount.textContent = parts.length > 0 ? parts.join(', ') : 'Empty folder';
+  }
+}
+
+async function downloadSelected() {
+  if (selectedItems.size === 0) return;
+
+  try {
+    const paths = Array.from(selectedItems);
+
+    const response = await fetch('/api/download-multi', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ paths })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download files');
+    }
+
+    // Create blob from response and trigger download
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'download.zip';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('Error downloading selected items:', error);
+    alert('Failed to download selected items. Please try again.');
   }
 }
 
