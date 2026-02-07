@@ -6,6 +6,9 @@ let currentSort = 'name-asc';
 let cachedItems = [];
 let selectedItems = new Set(); // Paths of selected items
 let lastSelectedIndex = -1; // Index of last selected item for shift-click range selection
+let moveMode = false; // Whether we're in move mode
+let moveSourcePath = ''; // The folder where files were selected for moving
+let moveItems = new Set(); // Items selected for moving
 let settings = {
   confirmDelete: true
 };
@@ -119,6 +122,8 @@ function setupEventListeners() {
   // Multi-select
   document.getElementById('select-all-btn').addEventListener('click', toggleSelectAll);
   document.getElementById('download-selected-btn').addEventListener('click', downloadSelected);
+  document.getElementById('move-selected-btn').addEventListener('click', handleMoveButton);
+  document.getElementById('cancel-move-btn').addEventListener('click', cancelMove);
   document.getElementById('delete-selected-btn').addEventListener('click', deleteSelected);
 }
 
@@ -142,6 +147,7 @@ async function loadFiles(path = '') {
     renderFileList(cachedItems);
     updateBreadcrumb(path);
     updateFileCount();
+    updateMoveUI(); // Update move button state when navigating
   } catch (error) {
     console.error('Error loading files:', error);
     fileList.innerHTML = '<div class="empty-state">Failed to load files. Please try again.</div>';
@@ -417,13 +423,52 @@ async function handleFileUpload() {
     return;
   }
 
+  // Check for conflicts first
+  const fileArray = Array.from(files);
+  const conflicts = await checkConflicts(
+    fileArray.map(f => ({ name: f.name })),
+    currentPath
+  );
+
+  if (conflicts.length > 0) {
+    const resolutions = await resolveConflicts(conflicts);
+
+    if (resolutions === null) {
+      // User cancelled
+      fileInput.value = ''; // Reset input
+      return;
+    }
+
+    // Filter files based on user decisions
+    const filesToUpload = fileArray.filter(file => {
+      const resolution = resolutions.find(r => r.name === file.name);
+      return !resolution || resolution.action === 'replace';
+    });
+
+    if (filesToUpload.length === 0) {
+      await showInfoModal('No Files', 'All files were skipped. No files to upload.');
+      fileInput.value = ''; // Reset input
+      return;
+    }
+
+    // Continue with filtered files
+    await performFileUpload(filesToUpload);
+    return;
+  }
+
+  // No conflicts, proceed with all files
+  await performFileUpload(fileArray);
+}
+
+// Separated upload logic for reuse
+async function performFileUpload(fileArray) {
   const formData = new FormData();
 
   // IMPORTANT: Append folder BEFORE files so multer can read it when determining destination
   formData.append('folder', currentPath);
 
   // Track file information for multi-file uploads
-  const fileList = Array.from(files);
+  const fileList = fileArray;
   const fileSizes = fileList.map(f => f.size);
   const totalFiles = fileList.length;
   const cumulativeSizes = [];
@@ -433,8 +478,8 @@ async function handleFileUpload() {
     cumulative += fileSizes[i];
   }
 
-  for (let i = 0; i < files.length; i++) {
-    formData.append('files', files[i]);
+  for (let i = 0; i < fileList.length; i++) {
+    formData.append('files', fileList[i]);
   }
 
   try {
@@ -583,6 +628,16 @@ async function handleFileUpload() {
 
 // Create new folder
 async function createFolder() {
+  // Prevent creating folders inside folders being moved
+  if (isInsideMovedFolder()) {
+    folderModal.style.display = 'none';
+    await showInfoModal(
+      'Cannot Create Folder',
+      'Cannot create folders inside items that are being moved.\n\nPlease cancel the move operation first.'
+    );
+    return;
+  }
+
   const folderName = folderNameInput.value.trim();
 
   if (!folderName) {
@@ -658,6 +713,9 @@ function toggleItemSelection(path, event) {
 }
 
 function toggleSelectAll() {
+  // Don't allow selection changes when in move mode
+  if (moveMode) return;
+
   if (selectedItems.size === cachedItems.length && cachedItems.length > 0) {
     // Deselect all
     clearSelection();
@@ -670,6 +728,9 @@ function toggleSelectAll() {
 }
 
 function clearSelection() {
+  // Don't clear if in move mode
+  if (moveMode) return;
+
   selectedItems.clear();
   lastSelectedIndex = -1; // Reset last selected index
   updateSelectionUI();
@@ -696,6 +757,9 @@ function updateSelectionUI() {
 
   // Update visual state of items
   renderFileList(cachedItems);
+
+  // Update move button state
+  updateMoveUI();
 }
 
 function updateFileCount() {
@@ -753,6 +817,398 @@ async function deleteSelected() {
   } catch (error) {
     console.error('Error deleting items:', error);
     alert('Failed to delete items. Please try again.');
+  }
+}
+
+// Handle move button click
+function handleMoveButton() {
+  if (!moveMode) {
+    // Entering move mode - "Move To" clicked
+    if (selectedItems.size === 0) return;
+
+    moveMode = true;
+    moveSourcePath = currentPath;
+    moveItems = new Set(selectedItems);
+
+    updateMoveUI();
+  } else {
+    // In move mode - "Drop Here" clicked
+    performMove();
+  }
+}
+
+// Cancel move operation
+function cancelMove() {
+  moveMode = false;
+  moveSourcePath = '';
+  moveItems.clear();
+  clearSelection();
+  updateMoveUI();
+}
+
+// Check if current path is valid for dropping files
+function canDropHere() {
+  if (!moveMode) return false;
+
+  // Can't drop in the same folder where files were picked up
+  if (currentPath === moveSourcePath) {
+    return false;
+  }
+
+  // Can't drop inside any of the selected folders or their subfolders
+  if (isInsideMovedFolder()) {
+    return false;
+  }
+
+  return true;
+}
+
+// Check if current path is inside any of the folders being moved
+function isInsideMovedFolder() {
+  if (!moveMode) return false;
+
+  for (const itemPath of moveItems) {
+    // Check if current path is inside this item or is the item itself
+    if (currentPath.startsWith(itemPath + '/') || currentPath === itemPath) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Update move button UI based on state
+function updateMoveUI() {
+  const moveBtn = document.getElementById('move-selected-btn');
+  const moveBtnText = document.getElementById('move-btn-text');
+  const cancelBtn = document.getElementById('cancel-move-btn');
+  const infoBar = document.getElementById('info-bar');
+  const selectionCount = document.getElementById('selection-count');
+  const selectAllBtn = document.getElementById('select-all-btn');
+  const newFolderBtn = document.getElementById('new-folder-btn');
+  const uploadLabel = document.querySelector('label[for="file-input"]');
+
+  if (!moveMode) {
+    // Normal mode - "Move To"
+    moveBtnText.textContent = 'Move To';
+    moveBtn.classList.remove('btn-warning');
+    moveBtn.classList.add('btn-primary');
+    moveBtn.disabled = selectedItems.size === 0;
+    cancelBtn.style.display = 'none';
+
+    // Re-enable selection
+    if (selectAllBtn) {
+      selectAllBtn.disabled = false;
+      selectAllBtn.style.opacity = '1';
+    }
+
+    // Re-enable folder creation and file upload
+    if (newFolderBtn) newFolderBtn.disabled = false;
+    if (uploadLabel) uploadLabel.style.opacity = '1';
+    if (uploadLabel) uploadLabel.style.pointerEvents = 'auto';
+  } else {
+    // Move mode - "Drop Here"
+    moveBtnText.textContent = 'Drop Here';
+    moveBtn.classList.remove('btn-primary');
+    moveBtn.classList.add('btn-warning');
+    moveBtn.disabled = !canDropHere();
+    cancelBtn.style.display = 'inline-block';
+
+    // Disable select all button in move mode
+    if (selectAllBtn) {
+      selectAllBtn.disabled = true;
+      selectAllBtn.style.opacity = '0.5';
+      selectAllBtn.title = 'Selection disabled while moving items';
+    }
+
+    // Show info about items being moved
+    infoBar.classList.add('has-selection');
+    selectionCount.textContent = `Moving ${moveItems.size} item${moveItems.size > 1 ? 's' : ''}`;
+
+    // Disable folder creation and file upload if inside a moved folder
+    if (isInsideMovedFolder()) {
+      if (newFolderBtn) {
+        newFolderBtn.disabled = true;
+        newFolderBtn.title = 'Cannot create folders inside items being moved';
+      }
+      if (uploadLabel) {
+        uploadLabel.style.opacity = '0.5';
+        uploadLabel.style.pointerEvents = 'none';
+        uploadLabel.title = 'Cannot upload files inside items being moved';
+      }
+    } else {
+      if (newFolderBtn) {
+        newFolderBtn.disabled = false;
+        newFolderBtn.title = '';
+      }
+      if (uploadLabel) {
+        uploadLabel.style.opacity = '1';
+        uploadLabel.style.pointerEvents = 'auto';
+        uploadLabel.title = '';
+      }
+    }
+  }
+}
+
+// Conflict Resolution System
+let conflictResolveCallback = null;
+let applyToAllConflicts = false;
+let applyToAllAction = null; // 'skip' or 'replace'
+
+// Show info/error modal
+function showInfoModal(title, message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('info-modal');
+    const titleEl = document.getElementById('info-modal-title');
+    const messageEl = document.getElementById('info-modal-message');
+    const closeBtn = document.getElementById('info-modal-close-btn');
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    modal.style.display = 'flex';
+
+    // Remove old listener
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+
+    newCloseBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      resolve();
+    });
+  });
+}
+
+// Show conflict modal and wait for user decision
+function showConflictModal(itemName, currentIndex, totalConflicts) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('conflict-modal');
+    const itemNameEl = document.getElementById('conflict-item-name');
+    const applyAllCheckbox = document.getElementById('conflict-apply-all');
+    const applyAllContainer = applyAllCheckbox.closest('.setting-item');
+    const skipBtn = document.getElementById('conflict-skip-btn');
+    const replaceBtn = document.getElementById('conflict-replace-btn');
+    const cancelBtn = document.getElementById('conflict-cancel-btn');
+
+    // Show conflict number if multiple
+    if (totalConflicts > 1) {
+      itemNameEl.textContent = `${itemName} (${currentIndex} of ${totalConflicts})`;
+      applyAllContainer.style.display = 'block';
+    } else {
+      itemNameEl.textContent = itemName;
+      applyAllContainer.style.display = 'none';
+    }
+
+    applyAllCheckbox.checked = false;
+    modal.style.display = 'flex';
+
+    // Remove old listeners
+    const newSkipBtn = skipBtn.cloneNode(true);
+    const newReplaceBtn = replaceBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    skipBtn.parentNode.replaceChild(newSkipBtn, skipBtn);
+    replaceBtn.parentNode.replaceChild(newReplaceBtn, replaceBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+    newSkipBtn.addEventListener('click', () => {
+      const applyAll = applyAllCheckbox.checked;
+      modal.style.display = 'none';
+      resolve({ action: 'skip', applyToAll: applyAll });
+    });
+
+    newReplaceBtn.addEventListener('click', () => {
+      const applyAll = applyAllCheckbox.checked;
+      modal.style.display = 'none';
+      resolve({ action: 'replace', applyToAll: applyAll });
+    });
+
+    newCancelBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      resolve({ action: 'cancel', applyToAll: false });
+    });
+  });
+}
+
+// Check for conflicts before move/upload
+async function checkConflicts(items, destination) {
+  try {
+    const response = await fetch('/api/check-conflicts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        items: items.map(item => ({
+          name: typeof item === 'string' ? item.split('/').pop() : item.name
+        })),
+        destination: destination
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to check conflicts');
+    }
+
+    const data = await response.json();
+    return data.conflicts || [];
+  } catch (error) {
+    console.error('Error checking conflicts:', error);
+    return [];
+  }
+}
+
+// Handle conflicts with user interaction
+async function resolveConflicts(conflicts) {
+  const resolutions = [];
+  let cancelled = false;
+
+  // Separate directory and file conflicts
+  const dirConflicts = conflicts.filter(c => c.isDirectory);
+  const fileConflicts = conflicts.filter(c => !c.isDirectory);
+
+  // Block on directory conflicts
+  if (dirConflicts.length > 0) {
+    const dirNames = dirConflicts.map(c => c.name).join('\n• ');
+    await showInfoModal(
+      'Directory Conflict',
+      `Cannot proceed - the following directories already exist:\n\n• ${dirNames}\n\nPlease rename or remove them first.`
+    );
+    return null; // Cancelled
+  }
+
+  // Handle file conflicts
+  applyToAllConflicts = false;
+  applyToAllAction = null;
+
+  const totalFileConflicts = fileConflicts.length;
+
+  for (let i = 0; i < fileConflicts.length; i++) {
+    const conflict = fileConflicts[i];
+
+    if (cancelled) {
+      resolutions.push({ name: conflict.name, action: 'skip' });
+      continue;
+    }
+
+    let action;
+    if (applyToAllConflicts && applyToAllAction) {
+      action = applyToAllAction;
+    } else {
+      const result = await showConflictModal(conflict.name, i + 1, totalFileConflicts);
+      action = result.action;
+
+      if (result.action === 'cancel') {
+        cancelled = true;
+        return null; // User cancelled entire operation
+      }
+
+      if (result.applyToAll) {
+        applyToAllConflicts = true;
+        applyToAllAction = result.action;
+      }
+    }
+
+    resolutions.push({ name: conflict.name, action });
+  }
+
+  return resolutions;
+}
+
+// Perform the move operation
+async function performMove() {
+  if (!canDropHere()) return;
+
+  try {
+    // Check for conflicts first
+    const conflicts = await checkConflicts(Array.from(moveItems), currentPath);
+
+    if (conflicts.length > 0) {
+      // Resolve conflicts with user
+      const resolutions = await resolveConflicts(conflicts);
+
+      if (resolutions === null) {
+        // User cancelled
+        return;
+      }
+
+      // Filter items based on resolutions
+      const itemsToMove = [];
+      const itemsToReplace = [];
+
+      for (const itemPath of moveItems) {
+        const itemName = itemPath.split('/').pop();
+        const resolution = resolutions.find(r => r.name === itemName);
+
+        if (!resolution || resolution.action === 'replace') {
+          itemsToMove.push(itemPath);
+          if (resolution) {
+            itemsToReplace.push(itemPath);
+          }
+        }
+        // Skip items are just not included
+      }
+
+      if (itemsToMove.length === 0) {
+        await showInfoModal('No Items', 'All items were skipped. No items to move.');
+        return;
+      }
+
+      // Perform the move with replacements if needed
+      const response = await fetch('/api/move', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: itemsToMove,
+          destination: currentPath,
+          replace: itemsToReplace
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok && response.status !== 207) {
+        throw new Error(data.error || 'Failed to move items');
+      }
+
+      // Success - exit move mode and reload
+      moveMode = false;
+      moveSourcePath = '';
+      moveItems.clear();
+      clearSelection();
+      loadFiles(currentPath);
+      loadDiskSpace();
+
+    } else {
+      // No conflicts, proceed with move
+      const response = await fetch('/api/move', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: Array.from(moveItems),
+          destination: currentPath
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to move items');
+      }
+
+      // Complete success - exit move mode and reload
+      moveMode = false;
+      moveSourcePath = '';
+      moveItems.clear();
+      clearSelection();
+      loadFiles(currentPath);
+      loadDiskSpace();
+    }
+  } catch (error) {
+    console.error('Error moving items:', error);
+    alert('Failed to move items: ' + error.message);
   }
 }
 
@@ -834,6 +1290,15 @@ function setupDragAndDrop() {
 
 // Handle dropped items (files and directories)
 async function handleDroppedItems(items) {
+  // Prevent uploads inside folders being moved
+  if (isInsideMovedFolder()) {
+    await showInfoModal(
+      'Cannot Upload',
+      'Cannot upload files inside folders that are being moved.\n\nPlease cancel the move operation first.'
+    );
+    return;
+  }
+
   const files = [];
 
   // First, collect all entries (DataTransferItemList can be invalidated during async operations)
@@ -907,6 +1372,56 @@ async function traverseEntry(entry, basePath, files) {
 
 // Upload files with their relative paths
 async function uploadFilesWithPaths(filesWithPaths) {
+  // Check for conflicts
+  // For directory uploads, check if any top-level directories conflict
+  const topLevelItems = new Set();
+  filesWithPaths.forEach(({ relativePath }) => {
+    const parts = relativePath.split('/');
+    if (parts.length > 1) {
+      // This is inside a directory
+      topLevelItems.add(parts[0]);
+    } else {
+      // This is a top-level file
+      topLevelItems.add(relativePath);
+    }
+  });
+
+  const conflicts = await checkConflicts(
+    Array.from(topLevelItems).map(name => ({ name })),
+    currentPath
+  );
+
+  if (conflicts.length > 0) {
+    const resolutions = await resolveConflicts(conflicts);
+
+    if (resolutions === null) {
+      // User cancelled
+      return;
+    }
+
+    // Filter files based on resolutions
+    const filesToUpload = filesWithPaths.filter(({ relativePath }) => {
+      const topLevel = relativePath.split('/')[0];
+      const resolution = resolutions.find(r => r.name === topLevel || r.name === relativePath);
+      return !resolution || resolution.action === 'replace';
+    });
+
+    if (filesToUpload.length === 0) {
+      await showInfoModal('No Files', 'All files were skipped. No files to upload.');
+      return;
+    }
+
+    // Continue with filtered files
+    await performDirectoryUpload(filesToUpload);
+    return;
+  }
+
+  // No conflicts, proceed with all files
+  await performDirectoryUpload(filesWithPaths);
+}
+
+// Separated directory upload logic
+async function performDirectoryUpload(filesWithPaths) {
   const formData = new FormData();
 
   // IMPORTANT: Append folder and paths BEFORE files so multer parses them first
