@@ -5,6 +5,7 @@ let currentView = 'table'; // 'grid' or 'table'
 let currentSort = 'name-asc';
 let cachedItems = [];
 let selectedItems = new Set(); // Paths of selected items
+let lastSelectedIndex = -1; // Index of last selected item for shift-click range selection
 let settings = {
   confirmDelete: true
 };
@@ -584,11 +585,30 @@ function downloadFolder(path) {
 function toggleItemSelection(path, event) {
   event.stopPropagation();
 
-  if (selectedItems.has(path)) {
-    selectedItems.delete(path);
+  // Get the index of the clicked item
+  const currentIndex = cachedItems.findIndex(item => item.path === path);
+
+  // Handle Shift+Click for range selection
+  if (event.shiftKey && lastSelectedIndex !== -1 && currentIndex !== -1) {
+    // Determine range
+    const start = Math.min(lastSelectedIndex, currentIndex);
+    const end = Math.max(lastSelectedIndex, currentIndex);
+
+    // Select all items in range
+    for (let i = start; i <= end; i++) {
+      selectedItems.add(cachedItems[i].path);
+    }
   } else {
-    selectedItems.add(path);
+    // Normal toggle behavior
+    if (selectedItems.has(path)) {
+      selectedItems.delete(path);
+    } else {
+      selectedItems.add(path);
+    }
   }
+
+  // Update last selected index
+  lastSelectedIndex = currentIndex;
 
   updateSelectionUI();
 }
@@ -607,6 +627,7 @@ function toggleSelectAll() {
 
 function clearSelection() {
   selectedItems.clear();
+  lastSelectedIndex = -1; // Reset last selected index
   updateSelectionUI();
 }
 
@@ -750,14 +771,14 @@ function setupDragAndDrop() {
   });
 
   // Handle drop
-  document.body.addEventListener('drop', (e) => {
+  document.body.addEventListener('drop', async (e) => {
     dragCounter = 0;
     dropOverlay.style.display = 'none';
     fileList.classList.remove('drag-over');
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleDroppedFiles(files);
+    const items = e.dataTransfer.items;
+    if (items && items.length > 0) {
+      await handleDroppedItems(items);
     }
   });
 
@@ -767,18 +788,146 @@ function setupDragAndDrop() {
   });
 }
 
-// Handle dropped files
-function handleDroppedFiles(files) {
-  // Create a FileList-like object for upload
-  const dataTransfer = new DataTransfer();
+// Handle dropped items (files and directories)
+async function handleDroppedItems(items) {
+  const files = [];
 
-  for (let i = 0; i < files.length; i++) {
-    dataTransfer.items.add(files[i]);
+  // First, collect all entries (DataTransferItemList can be invalidated during async operations)
+  const entries = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.kind === 'file') {
+      const entry = item.webkitGetAsEntry();
+      if (entry) {
+        entries.push(entry);
+      }
+    }
   }
 
-  // Set the files to the file input and trigger upload
-  fileInput.files = dataTransfer.files;
-  handleFileUpload();
+  // Now traverse all entries
+  for (let i = 0; i < entries.length; i++) {
+    try {
+      const entry = entries[i];
+      await traverseEntry(entry, '', files);
+    } catch (error) {
+      console.error('Error traversing entry:', error);
+    }
+  }
+
+  if (files.length > 0) {
+    uploadFilesWithPaths(files);
+  }
+}
+
+// Recursively traverse directory entries
+async function traverseEntry(entry, basePath, files) {
+  if (entry.isFile) {
+    // Get the file and store it with its relative path
+    return new Promise((resolve) => {
+      entry.file((file) => {
+        const relativePath = basePath + file.name;
+        files.push({ file, relativePath });
+        resolve();
+      });
+    });
+  } else if (entry.isDirectory) {
+    const dirReader = entry.createReader();
+
+    // Read all entries in the directory
+    const entries = await new Promise((resolve) => {
+      const allEntries = [];
+
+      function readEntries() {
+        dirReader.readEntries((entries) => {
+          if (entries.length === 0) {
+            // No more entries, done reading this directory
+            resolve(allEntries);
+          } else {
+            // Add entries and continue reading
+            allEntries.push(...entries);
+            readEntries();
+          }
+        });
+      }
+
+      readEntries();
+    });
+
+    // Process all entries in this directory
+    const newBasePath = basePath + entry.name + '/';
+    for (const subEntry of entries) {
+      await traverseEntry(subEntry, newBasePath, files);
+    }
+  }
+}
+
+// Upload files with their relative paths
+async function uploadFilesWithPaths(filesWithPaths) {
+  const formData = new FormData();
+
+  // IMPORTANT: Append folder and paths BEFORE files so multer parses them first
+  formData.append('folder', currentPath);
+
+  // Append all paths first
+  for (const { file, relativePath } of filesWithPaths) {
+    formData.append('paths', relativePath);
+  }
+
+  // Then append all files
+  for (const { file, relativePath } of filesWithPaths) {
+    formData.append('files', file);
+  }
+
+  try {
+    // Show progress
+    uploadProgress.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = '0%';
+
+    const xhr = new XMLHttpRequest();
+
+    // Set timeout to 40 minutes for large file uploads
+    xhr.timeout = 2400000;
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = Math.round((e.loaded / e.total) * 100);
+        progressFill.style.width = percentComplete + '%';
+        progressText.textContent = percentComplete + '%';
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200) {
+        // Upload successful
+        setTimeout(() => {
+          uploadProgress.style.display = 'none';
+          loadFiles(currentPath); // Reload file list
+          clearSelection(); // Clear any selections
+        }, 500);
+      } else {
+        alert('Upload failed. Please try again.');
+        uploadProgress.style.display = 'none';
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      alert('Upload failed. Please try again.');
+      uploadProgress.style.display = 'none';
+    });
+
+    xhr.addEventListener('timeout', () => {
+      alert('Upload timed out. The file may be too large or your connection too slow. Please try again.');
+      uploadProgress.style.display = 'none';
+    });
+
+    xhr.open('POST', '/api/upload');
+    xhr.send(formData);
+  } catch (error) {
+    console.error('Error uploading files:', error);
+    alert('Failed to upload files. Please try again.');
+    uploadProgress.style.display = 'none';
+  }
 }
 
 // Theme functionality
