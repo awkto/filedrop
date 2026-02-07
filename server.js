@@ -28,18 +28,65 @@ if (!fsSync.existsSync(UPLOAD_DIR)) {
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const folder = req.body.folder || '';
-    const uploadPath = path.join(UPLOAD_DIR, folder);
 
-    // Create directory if it doesn't exist
-    if (!fsSync.existsSync(uploadPath)) {
-      await fs.mkdir(uploadPath, { recursive: true });
+    // Initialize file counter if not present
+    if (!req._fileCounter) {
+      req._fileCounter = 0;
     }
 
-    cb(null, uploadPath);
+    // Get the relative path for this file (if provided)
+    const fileIndex = req._fileCounter;
+    req._fileCounter++;
+
+    // Ensure paths is always an array (multer returns string if only one value)
+    let paths = req.body.paths || [];
+    if (typeof paths === 'string') {
+      paths = [paths];
+    }
+    const relativePath = paths[fileIndex] || file.originalname;
+
+    // Extract directory path from the relative path
+    const dirPath = path.dirname(relativePath);
+
+    // Combine base folder with the directory path from the file
+    let uploadPath;
+    if (dirPath && dirPath !== '.') {
+      uploadPath = path.join(UPLOAD_DIR, folder, dirPath);
+    } else {
+      uploadPath = path.join(UPLOAD_DIR, folder);
+    }
+
+    // Sanitize the upload path to prevent directory traversal
+    const sanitizedPath = path.join(UPLOAD_DIR, path.relative(UPLOAD_DIR, uploadPath));
+
+    // Create directory if it doesn't exist
+    if (!fsSync.existsSync(sanitizedPath)) {
+      await fs.mkdir(sanitizedPath, { recursive: true });
+    }
+
+    cb(null, sanitizedPath);
   },
   filename: (req, file, cb) => {
-    // Preserve original filename
-    cb(null, file.originalname);
+    // Initialize file counter for filename if not present (should already be set by destination)
+    if (!req._filenameCounter) {
+      req._filenameCounter = 0;
+    }
+
+    // Get the relative path for this file (if provided)
+    const fileIndex = req._filenameCounter;
+    req._filenameCounter++;
+
+    // Ensure paths is always an array (multer returns string if only one value)
+    let paths = req.body.paths || [];
+    if (typeof paths === 'string') {
+      paths = [paths];
+    }
+    const relativePath = paths[fileIndex] || file.originalname;
+
+    // Extract just the filename from the relative path
+    const filename = path.basename(relativePath);
+
+    cb(null, filename);
   }
 });
 
