@@ -231,28 +231,48 @@ function renderGridView(items) {
     `;
   }).join('');
 
-  // Add checkbox handlers
+  // Add checkbox handlers - make checkbox and surrounding area clickable
   document.querySelectorAll('.file-item-checkbox').forEach(checkbox => {
     checkbox.addEventListener('click', (e) => {
+      e.stopPropagation();
       toggleItemSelection(checkbox.dataset.path, e);
     });
+
+    // Make the area around the checkbox also toggle it
+    const item = checkbox.closest('.file-item');
+    if (item) {
+      // Create a click zone around the checkbox
+      checkbox.parentElement.addEventListener('click', (e) => {
+        // If clicking near checkbox but not on other elements
+        if (e.target === item && e.offsetX < 50) { // First 50px from left
+          e.stopPropagation();
+          toggleItemSelection(checkbox.dataset.path, e);
+        }
+      });
+    }
   });
 
-  // Add click handlers for folders and files
-  document.querySelectorAll('.file-item.folder').forEach(item => {
-    item.addEventListener('click', (e) => {
-      if (!e.target.closest('.file-actions') && !e.target.classList.contains('file-item-checkbox')) {
+  // Add click handlers only to file-name text (not icon or entire item)
+  document.querySelectorAll('.file-item.folder .file-name').forEach(fileName => {
+    fileName.addEventListener('click', (e) => {
+      const item = e.target.closest('.file-item');
+      if (item) {
         navigateToPath(item.dataset.path);
       }
     });
+    // Make it look clickable
+    fileName.style.cursor = 'pointer';
   });
 
-  document.querySelectorAll('.file-item.file').forEach(item => {
-    item.addEventListener('click', (e) => {
-      if (!e.target.closest('.file-actions') && !e.target.classList.contains('file-item-checkbox')) {
+  document.querySelectorAll('.file-item.file .file-name').forEach(fileName => {
+    fileName.addEventListener('click', (e) => {
+      const item = e.target.closest('.file-item');
+      if (item) {
         downloadFile(item.dataset.path);
       }
     });
+    // Make it look clickable
+    fileName.style.cursor = 'pointer';
   });
 }
 
@@ -308,22 +328,46 @@ function renderTableView(items) {
     });
   });
 
-  // Add click handlers for folders in table view
-  document.querySelectorAll('.file-table tbody tr.folder').forEach(row => {
-    row.addEventListener('click', (e) => {
-      if (!e.target.closest('.file-actions-cell') && !e.target.classList.contains('file-item-checkbox')) {
+  // Make checkbox cell clickable to toggle checkbox (for easier clicking)
+  document.querySelectorAll('.file-checkbox-cell').forEach(cell => {
+    cell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = e.target.closest('tr');
+      if (row) {
+        const checkbox = cell.querySelector('.file-item-checkbox');
+        if (checkbox && e.target !== checkbox) {
+          // Toggle the checkbox if clicking the cell but not the checkbox itself
+          checkbox.checked = !checkbox.checked;
+          toggleItemSelection(checkbox.dataset.path, e);
+        }
+      }
+    });
+    // Make it look clickable
+    cell.style.cursor = 'pointer';
+  });
+
+  // Add click handlers for folders in table view - only on name cell
+  document.querySelectorAll('.file-table tbody tr.folder .file-name-cell').forEach(nameCell => {
+    nameCell.addEventListener('click', (e) => {
+      const row = e.target.closest('tr');
+      if (row) {
         navigateToPath(row.dataset.path);
       }
     });
+    // Make it look clickable
+    nameCell.style.cursor = 'pointer';
   });
 
-  // Add click handlers for files in table view
-  document.querySelectorAll('.file-table tbody tr.file').forEach(row => {
-    row.addEventListener('click', (e) => {
-      if (!e.target.closest('.file-actions-cell') && !e.target.classList.contains('file-item-checkbox')) {
+  // Add click handlers for files in table view - only on name cell
+  document.querySelectorAll('.file-table tbody tr.file .file-name-cell').forEach(nameCell => {
+    nameCell.addEventListener('click', (e) => {
+      const row = e.target.closest('tr');
+      if (row) {
         downloadFile(row.dataset.path);
       }
     });
+    // Make it look clickable
+    nameCell.style.cursor = 'pointer';
   });
 }
 
