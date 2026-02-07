@@ -75,6 +75,12 @@
           <button id="download-selected-btn" class="btn btn-success">
             <span class="icon">📥</span> Download as Zip
           </button>
+          <button id="move-selected-btn" class="btn btn-primary">
+            <span class="icon">✂️</span> <span id="move-btn-text">Move To</span>
+          </button>
+          <button id="cancel-move-btn" class="btn btn-secondary btn-sm" style="display: none;" title="Cancel move">
+            <span class="icon">✕</span>
+          </button>
           <button id="delete-selected-btn" class="btn btn-danger">
             <span class="icon">🗑️</span> Delete Selected
           </button>
@@ -161,6 +167,37 @@
       </div>
       <div class="modal-actions">
         <button id="close-settings-btn" class="btn btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conflict resolution modal -->
+  <div id="conflict-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>File Conflict</h2>
+      <p id="conflict-message">A file with this name already exists.</p>
+      <div id="conflict-item-name" style="margin: 15px 0; font-weight: bold; text-align: center;"></div>
+      <div class="setting-item" style="margin: 15px 0;">
+        <label class="setting-label">
+          <input type="checkbox" id="conflict-apply-all" class="setting-checkbox">
+          <span class="setting-text">Apply to all conflicts</span>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button id="conflict-skip-btn" class="btn btn-secondary">Skip</button>
+        <button id="conflict-replace-btn" class="btn btn-warning">Replace</button>
+        <button id="conflict-cancel-btn" class="btn btn-danger">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error/Info modal -->
+  <div id="info-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2 id="info-modal-title">Notice</h2>
+      <div id="info-modal-message" style="margin: 20px 0; white-space: pre-line;"></div>
+      <div class="modal-actions">
+        <button id="info-modal-close-btn" class="btn btn-primary">OK</button>
       </div>
     </div>
   </div>

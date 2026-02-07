@@ -384,6 +384,122 @@ app.delete('/api/delete/*', async (req, res) => {
   }
 });
 
+// Check for conflicts before upload/move
+app.post('/api/check-conflicts', express.json(), async (req, res) => {
+  try {
+    const { items, destination } = req.body;
+
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: 'Items array required' });
+    }
+
+    const destPath = getFullPath(destination || '');
+    const conflicts = [];
+
+    for (const item of items) {
+      const targetPath = path.join(destPath, item.name);
+
+      try {
+        await fs.access(targetPath);
+        const stats = await fs.stat(targetPath);
+
+        conflicts.push({
+          name: item.name,
+          type: stats.isDirectory() ? 'directory' : 'file',
+          isDirectory: stats.isDirectory()
+        });
+      } catch {
+        // No conflict, item doesn't exist
+      }
+    }
+
+    res.json({ conflicts });
+  } catch (error) {
+    console.error('Error checking conflicts:', error);
+    res.status(500).json({ error: 'Failed to check conflicts' });
+  }
+});
+
+// Move files/folders
+app.post('/api/move', express.json(), async (req, res) => {
+  try {
+    const { items, destination, replace = [] } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'No items provided' });
+    }
+
+    const destPath = getFullPath(destination);
+
+    // Ensure destination directory exists
+    try {
+      await fs.access(destPath);
+      const stats = await fs.stat(destPath);
+      if (!stats.isDirectory()) {
+        return res.status(400).json({ error: 'Destination is not a directory' });
+      }
+    } catch {
+      // Create destination if it doesn't exist
+      await fs.mkdir(destPath, { recursive: true });
+    }
+
+    // Move each item
+    const results = [];
+    for (const itemPath of items) {
+      try {
+        const sourcePath = getFullPath(itemPath);
+        const itemName = path.basename(itemPath);
+        const targetPath = path.join(destPath, itemName);
+        const shouldReplace = replace.includes(itemPath);
+
+        // Check if source exists
+        await fs.access(sourcePath);
+
+        // Check if target already exists
+        try {
+          await fs.access(targetPath);
+
+          if (shouldReplace) {
+            // Delete existing target before moving
+            const stats = await fs.stat(targetPath);
+            if (stats.isDirectory()) {
+              await fs.rm(targetPath, { recursive: true, force: true });
+            } else {
+              await fs.unlink(targetPath);
+            }
+          } else {
+            results.push({ item: itemPath, error: 'Item already exists in destination' });
+            continue;
+          }
+        } catch {
+          // Target doesn't exist, which is good
+        }
+
+        // Perform the move
+        await fs.rename(sourcePath, targetPath);
+        results.push({ item: itemPath, success: true });
+      } catch (error) {
+        console.error(`Error moving ${itemPath}:`, error);
+        results.push({ item: itemPath, error: error.message });
+      }
+    }
+
+    // Check if any moves failed
+    const failures = results.filter(r => r.error);
+    if (failures.length > 0) {
+      return res.status(207).json({
+        message: 'Some items failed to move',
+        results
+      });
+    }
+
+    res.json({ message: 'Items moved successfully', results });
+  } catch (error) {
+    console.error('Error moving items:', error);
+    res.status(500).json({ error: 'Failed to move items' });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
