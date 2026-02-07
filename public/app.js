@@ -868,6 +868,17 @@ async function uploadFilesWithPaths(filesWithPaths) {
   // IMPORTANT: Append folder and paths BEFORE files so multer parses them first
   formData.append('folder', currentPath);
 
+  // Track file information for multi-file uploads
+  const fileList = filesWithPaths.map(f => f.file);
+  const fileSizes = fileList.map(f => f.size);
+  const totalFiles = fileList.length;
+  const cumulativeSizes = [];
+  let cumulative = 0;
+  for (let i = 0; i < fileSizes.length; i++) {
+    cumulativeSizes.push(cumulative);
+    cumulative += fileSizes[i];
+  }
+
   // Append all paths first
   for (const { file, relativePath } of filesWithPaths) {
     formData.append('paths', relativePath);
@@ -884,16 +895,107 @@ async function uploadFilesWithPaths(filesWithPaths) {
     progressFill.style.width = '0%';
     progressText.textContent = '0%';
 
+    // Reset or show multi-file details
+    const multiFileSection = document.getElementById('progress-multi-file');
+    const progressTitle = document.getElementById('progress-title');
+
+    if (totalFiles > 1) {
+      multiFileSection.style.display = 'block';
+      if (progressTitle) {
+        progressTitle.textContent = `Uploading file 1 of ${totalFiles}`;
+      }
+    } else {
+      multiFileSection.style.display = 'none';
+      if (progressTitle) {
+        progressTitle.textContent = 'Uploading...';
+      }
+    }
+
     const xhr = new XMLHttpRequest();
 
     // Set timeout to 40 minutes for large file uploads
     xhr.timeout = 2400000;
 
+    // Variables for speed calculation
+    let startTime = Date.now();
+    let lastTime = startTime;
+    let lastLoaded = 0;
+    const speedSamples = [];
+    const maxSamples = 10; // Number of samples for averaging
+
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) {
-        const percentComplete = Math.round((e.loaded / e.total) * 100);
-        progressFill.style.width = percentComplete + '%';
-        progressText.textContent = percentComplete + '%';
+        const currentTime = Date.now();
+        const timeDiff = (currentTime - lastTime) / 1000; // seconds
+        const bytesDiff = e.loaded - lastLoaded;
+
+        // Calculate current speed
+        if (timeDiff > 0.1) { // Update every 100ms
+          const currentSpeed = bytesDiff / timeDiff; // bytes per second
+
+          // Add to samples for averaging
+          speedSamples.push(currentSpeed);
+          if (speedSamples.length > maxSamples) {
+            speedSamples.shift(); // Remove oldest sample
+          }
+
+          // Calculate average speed
+          const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
+
+          // Update progress
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          progressFill.style.width = percentComplete + '%';
+          progressText.textContent = percentComplete + '%';
+
+          // Update size and speed display
+          const progressSize = document.getElementById('progress-size');
+          const progressSpeed = document.getElementById('progress-speed');
+
+          if (progressSize) {
+            progressSize.textContent = `${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+          }
+
+          if (progressSpeed) {
+            progressSpeed.textContent = `${formatBytes(avgSpeed)}/s`;
+          }
+
+          // Update multi-file progress if uploading multiple files
+          if (totalFiles > 1) {
+            // Find current file being uploaded
+            let currentFileIndex = 0;
+            let filesCompleted = 0;
+
+            for (let i = 0; i < cumulativeSizes.length; i++) {
+              if (e.loaded >= cumulativeSizes[i] + fileSizes[i]) {
+                filesCompleted = i + 1;
+                currentFileIndex = Math.min(i + 1, totalFiles - 1);
+              } else if (e.loaded >= cumulativeSizes[i]) {
+                currentFileIndex = i;
+                break;
+              }
+            }
+
+            // Update current file name
+            const currentFileName = document.getElementById('current-file-name');
+            const filesCompletedEl = document.getElementById('files-completed');
+            const progressTitle = document.getElementById('progress-title');
+
+            if (currentFileName && fileList[currentFileIndex]) {
+              currentFileName.textContent = fileList[currentFileIndex].name;
+            }
+
+            if (filesCompletedEl) {
+              filesCompletedEl.textContent = `${filesCompleted} / ${totalFiles} files completed`;
+            }
+
+            if (progressTitle) {
+              progressTitle.textContent = `Uploading file ${currentFileIndex + 1} of ${totalFiles}`;
+            }
+          }
+
+          lastTime = currentTime;
+          lastLoaded = e.loaded;
+        }
       }
     });
 
@@ -903,6 +1005,7 @@ async function uploadFilesWithPaths(filesWithPaths) {
         setTimeout(() => {
           uploadProgress.style.display = 'none';
           loadFiles(currentPath); // Reload file list
+          loadDiskSpace(); // Refresh disk space
           clearSelection(); // Clear any selections
         }, 500);
       } else {
